@@ -1,0 +1,67 @@
+<snippet>
+	<name>Animation memsave</name>
+	<description>Animation player with memory saving</description>
+	<template><![CDATA[
+anm_hl	ld hl, anima_proc
+	ld a, (hl) : or a : jr nz, lab1
+	ld hl, anima_proc
+lab1	ld e, (hl) : inc hl
+	ld d, (hl) : inc hl
+	ld (anm_hl + 1), hl
+	ex de, hl
+						; determine data flow start
+	push hl
+lab2	ld a, (hl) : inc hl
+	inc a
+	jp nz, lab2
+	pop ix
+						; set start address
+	ld e,(hl) : inc hl
+	ld d,(hl) : inc hl
+	ld b,a
+cycle
+	ld  a, (ix + 0)
+	inc ix
+
+	ld c,a
+	rla
+	jr nc,lab3
+
+	rlca		; cp  #80
+	ret c		; ret nc
+jmp100
+	ld  a,c
+	and #0f
+	add a,d : ld d,a
+	bit 4,c
+	jr  z, cycle
+	ld  c, #80				; additional jump +128 bytes
+	ex  de, hl
+	add hl, bc
+	ex  de, hl
+	jp  cycle
+						; end of frame		
+lab3	rlca
+	jr c,anc_jmp
+	inc c					; copy N bytes from flow to screen
+	ldir
+	jp cycle
+anc_jmp						; jump screen address
+	res 6,c
+	inc c
+	ex  de, hl
+	add hl, bc
+	ex  de, hl
+	jp  cycle
+anima_proc
+%FRAMES% 
+	dw #0000
+]]></template>
+	<length>78</length>
+	<params>
+		<param>
+			<varname>FRAMES</varname>
+			<type>string</type>
+		</param>
+	</params>
+</snippet>

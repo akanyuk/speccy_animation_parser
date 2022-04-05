@@ -1,0 +1,24 @@
+<snippet>
+	<name>Animation fast</name>
+	<description>Animation player with fast rendering</description>
+	<template><![CDATA[
+anm_hl	ld hl, anm_db
+	ld a, (hl) : or a : jr nz, 1f
+	ld hl, anm_db			; revert to start of animation
+1	ld e, (hl) : inc hl
+	ld d, (hl) : inc hl
+	ld (anm_hl + 1), hl
+	ex de, hl
+	jp (hl)
+anm_db
+%FRAMES% 
+	db #00
+]]></template>
+	<length>39</length>
+	<params>
+		<param>
+			<varname>FRAMES</varname>
+			<type>string</type>
+		</param>
+	</params>
+</snippet>
