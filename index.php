@@ -2,9 +2,12 @@
 require 'vendor/autoload.php';
 
 require('src/parse256x192.php');
+
+require('src/GenerateDiff.php');
 require('src/GeneratorFast.php');
-require('src/GeneratorMemsave.php');
-require('src/Archive.php');
+require('src/GenerateMemsave.php');
+
+require('src/Archiver.php');
 
 if (!empty($_FILES)) {
     ini_set('max_execution_time', 300);
@@ -35,9 +38,12 @@ if (!empty($_FILES)) {
     $frames = $parser->parseSource();
 
     // Generate data
-    $archiver = new Archive();
-    $archiver->GenerateSources(GeneratorFast::Generate($frames), Archive::METHOD_FAST);
-    $archiver->GenerateSources(GeneratorMemsave::Generate($frames), Archive::METHOD_MEMSAVE);
+    $archiver = new Archiver();
+    $archiver->GenerateSources(GeneratorFast::Generate($frames), Archiver::METHOD_FAST);
+
+    $archiver->AddFiles(GenerateMemsave($frames), 'memsave');
+    $archiver->AddFiles(GenerateDiff($frames), 'diff');
+
     $content = $archiver->Done();
 
     header('Content-Type: application/zip');

@@ -1,6 +1,6 @@
 <?php
 
-class Archive {
+class Archiver {
     const METHOD_FAST = 1;
     const METHOD_MEMSAVE = 2;
 
@@ -13,10 +13,18 @@ class Archive {
         $this->zip->open($this->tmpFile, ZIPARCHIVE::CREATE);
     }
 
+    function AddFiles($files, $prefix = "") {
+        $prefix = $prefix == '' ? $prefix : $prefix.'/';
+
+        foreach ($files as $file) {
+            $this->zip->addFromString($prefix.$file['filename'], $file['data']);
+        }
+    }
+
     function Done() {
         // Adding make.cmd
         $tpl = 'sjasmplus --inc=fast\. fast\test-animation.asm' . "\n";
-        $tpl .= 'sjasmplus --inc=memsave\. memsave\test-animation.asm';
+        $tpl .= 'sjasmplus --inc=memsave\. memsave\test.asm';
         $this->zip->addFromString('make.cmd', $tpl);
 
         $this->zip->close();
@@ -76,17 +84,6 @@ class Archive {
             $this->zip->addFromString($methodPrefix . '/res/' . $namePrefix . '/' . $key . '.asm', $frame['source']);
 
             $animaFrames[] = "\t" . 'dw ' . $procName;
-
-            // Adding diff
-            if (empty($frame['diff'])) {
-                continue;
-            }
-
-            $diff = '';
-            foreach ($frame['diff'] as $address => $byte) {
-                $diff .= sprintf("%04x", $address) . ' ' . sprintf("%02x", $byte) . "\n";
-            }
-            $this->zip->addFromString('diff/' . $key . '.txt', $diff);
         }
 
         // Generate animation function
