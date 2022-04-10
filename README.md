@@ -1,23 +1,17 @@
 ﻿# Speccy Animation parser
 
-Конвертер GIF-файла с анимацией в исходный код ZX Spectrum
+Library for parsing GIF-file or ZIP-archive with scr-files into ZX Spectrum animation source code
 
-## Установка и запуск 
+## Requires 
 
-Для запуска необходим web-сервер с поддержкой PHP не ниже v5.4, а так же [Composer](https://getcomposer.org/)
+* PHP 5.4 or above
+* composer
 
-* Скопировать файлы проекта на web-сервер
-* Выполнить `composer update`
+## GIF-file requires
 
-
+* Black and white
+* Without compression
+  
 ## Online demo
 
 https://nyuk.retropc.ru/animation_parser_zx
-
-
-## Готовый сервер (Windows)
-
-Готовый сервер nginx + php7 для Windows доступен по этой ссылке: https://ссылка.на.диск. Скачанный архив необходимо распаковать в каталог проекта.
-
-* Запустить `win-server-start.cmd`
-* Открыть в браузере `http://localhost:48128` если не открылся автоматически
