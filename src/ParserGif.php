@@ -1,5 +1,11 @@
 <?php
 
+namespace SpeccyAnimationParser;
+
+use ChromePhp;
+use Exception;
+use GifFrameExtractor\GifFrameExtractor;
+
 class ParserGif {
     private $curScreen = array(); // Массив с данными текущего состояния экрана
 
@@ -60,12 +66,12 @@ class ParserGif {
     }
 
     public function Parse($filename) {
-        if (!GifFrameExtractor\GifFrameExtractor::isAnimatedGif($filename)) {
+        if (!GifFrameExtractor::isAnimatedGif($filename)) {
             $this->error('Wrong GIF file', __FILE__, __LINE__);
             return false;
         }
 
-        $gfe = new GifFrameExtractor\GifFrameExtractor();
+        $gfe = new GifFrameExtractor();
         try {
             $gfe->extract($filename);
         } catch (Exception $e) {

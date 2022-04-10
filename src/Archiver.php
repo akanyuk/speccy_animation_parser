@@ -1,5 +1,9 @@
 <?php
 
+namespace SpeccyAnimationParser;
+
+use ZipArchive;
+
 class Archiver {
     private $zip;
     private $tmpFile;

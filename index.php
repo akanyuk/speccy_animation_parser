@@ -1,17 +1,24 @@
 <?php
+
+use SpeccyAnimationParser\Archiver;
+use SpeccyAnimationParser\ParserGif;
+use SpeccyAnimationParser\ParserScrZip;
+use function SpeccyAnimationParser\GenerateDiff;
+use function SpeccyAnimationParser\GenerateFast;
+use function SpeccyAnimationParser\GenerateMemsave;
+
 require 'vendor/autoload.php';
 
+require('src/Archiver.php');
 require('src/ParserGif.php');
 require('src/ParserScrZip.php');
 require('src/GenerateDiff.php');
 require('src/GenerateFast.php');
 require('src/GenerateMemsave.php');
-require('src/Archiver.php');
 
 if (!empty($_FILES)) {
     ini_set('max_execution_time', 300);
 
-    // Upload animation
     if (!isset($_FILES['animation_file'])) {
         exit('No file selected.');
     }
@@ -35,7 +42,6 @@ if (!empty($_FILES)) {
             exit('Unknown animation type.');
     }
 
-    // Generate data
     $archiver = new Archiver();
     $archiver->AddFiles(GenerateFast($frames), 'fast');
     $archiver->AddFiles(GenerateMemsave($frames), 'memsave');

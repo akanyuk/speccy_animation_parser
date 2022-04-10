@@ -1,5 +1,7 @@
 <?php
 
+namespace SpeccyAnimationParser;
+
 function GenerateFast($frames) {
     // Removing 0-frame
     array_shift($frames);

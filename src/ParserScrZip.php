@@ -1,5 +1,10 @@
 <?php
 
+namespace SpeccyAnimationParser;
+
+use ChromePhp;
+use ZipArchive;
+
 /**
  * Class ParserScrZip
  * @desc парсинг архива с scr-файлами
