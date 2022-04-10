@@ -1,10 +1,11 @@
 <?php
 require 'vendor/autoload.php';
 
-require('src/parse256x192.php');
+require('src/ParserGif.php');
+require('src/ParserScrZip.php');
 require('src/GenerateDiff.php');
-require('src/GeneratorFast.php');
-require('src/GeneratorMemsave.php');
+require('src/GenerateFast.php');
+require('src/GenerateMemsave.php');
 require('src/Archiver.php');
 
 if (!empty($_FILES)) {
@@ -17,23 +18,22 @@ if (!empty($_FILES)) {
 
     switch (pathinfo($_FILES['animation_file']['name'], PATHINFO_EXTENSION)) {
         case 'gif':
-            $sourceType = 'gif';
+            $parser = new ParserGif();
+            $frames = $parser->Parse($_FILES['animation_file']['tmp_name']);
+            if ($frames === false) {
+                exit("Parse GIF error");
+            }
             break;
         case 'zip':
-            $sourceType = 'scr_zip';
+            $parser = new ParserScrZip();
+            $frames = $parser->Parse($_FILES['animation_file']['tmp_name']);
+            if ($frames === false) {
+                exit("Parse SCR files in ZIP archive error");
+            }
             break;
         default:
             exit('Unknown animation type.');
     }
-
-    $parser = new parse256x192(array(
-        'sourceType' => $sourceType,
-    ));
-    if (!$parser->load($_FILES['animation_file']['tmp_name'])) {
-        return false;
-    }
-
-    $frames = $parser->parseSource();
 
     // Generate data
     $archiver = new Archiver();
