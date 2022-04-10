@@ -2,11 +2,9 @@
 require 'vendor/autoload.php';
 
 require('src/parse256x192.php');
-
 require('src/GenerateDiff.php');
 require('src/GeneratorFast.php');
-require('src/GenerateMemsave.php');
-
+require('src/GeneratorMemsave.php');
 require('src/Archiver.php');
 
 if (!empty($_FILES)) {
@@ -39,8 +37,7 @@ if (!empty($_FILES)) {
 
     // Generate data
     $archiver = new Archiver();
-    $archiver->GenerateSources(GeneratorFast::Generate($frames), Archiver::METHOD_FAST);
-
+    $archiver->AddFiles(GenerateFast($frames), 'fast');
     $archiver->AddFiles(GenerateMemsave($frames), 'memsave');
     $archiver->AddFiles(GenerateDiff($frames), 'diff');
 
