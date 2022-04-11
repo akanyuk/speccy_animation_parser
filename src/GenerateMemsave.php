@@ -3,12 +3,11 @@
 namespace SpeccyAnimationParser;
 
 /*
-    Поток команд:
-    %00xxxxxх - вывести следующие xxxxx + 1 байт (1-64) из потока данных на экран со сдвигом адреса +1
-    %01xxxxxx - сдвинуть указатель адреса на xxxxxx + 1 (1-64)
-    %101yxxxx - сдвинуть указатель адреса #100 байт xxxxx раз (0-15). Если установлен бит Y, то сдвигаемся еще на 128 байт
-    %11111111 - конец фрейма
-    далее - поток данных, где первые два байта - стартовый адрес в экране
+    Первые два байта - начальный адрес экрана, далее команды:
+    %00xxxxxх - вывести следующие xxxxx + 1 байт (1-64) на экран, сдвинув указатель адреса экрана
+    %01xxxxxx - сдвинуть указатель адреса экрана на xxxxxx + 1 (1-64)
+    %101yxxxx - сдвинуть указатель адреса экрана #100 байт xxxxx раз (0-15). Если установлен бит Y, то сдвигаемся еще на 128 байт
+    %11xxxxxx - конец фрейма
 */
 function GenerateMemsave($frames) {
     // Removing 0-frame
@@ -48,7 +47,6 @@ function generateMemsaveRes($frames) {
         ksort($addresses);
 
         $dataFlow = array();        // Поток данных сначала сохраняем в массив, потом разворачиваем в строку
-        $commandsFlow = array();    // Поток команд сначала сохраняем в массив, потом разворачиваем в строку
         $dataBuf = array();         // Накопительный буфер для выводимых байтов
         $curAddress = 0;            // Последний обработанный экранный адрес
         foreach ($addresses as $address => $byte) {
@@ -68,7 +66,7 @@ function generateMemsaveRes($frames) {
             }
 
             if (($address != $curAddress && !empty($dataBuf)) || count($dataBuf) == 64) {
-                $commandsFlow[] = "\t" . 'db %00' . sprintf("%06s", decbin(count($dataBuf) - 1));
+                $dataFlow[] = "\t" . 'db %00' . sprintf("%06s", decbin(count($dataBuf) - 1));
 
                 foreach ($dataBuf as $b) {
                     $dataFlow[] = "\t" . 'db #' . sprintf("%02x", $b);
@@ -83,12 +81,12 @@ function generateMemsaveRes($frames) {
                 $delta2 = $address >= $curAddress + 128 ? 0x10 : 0;
                 $curAddress += $delta2 ? 128 : 0;
 
-                $commandsFlow[] = "\t" . 'db %101' . sprintf("%05s", decbin($delta + $delta2));
+                $dataFlow[] = "\t" . 'db %101' . sprintf("%05s", decbin($delta + $delta2));
             }
 
             while ($curAddress != $address) {
                 $delta = $address - $curAddress > 64 ? 64 : $address - $curAddress;
-                $commandsFlow[] = "\t" . 'db %01' . sprintf("%06s", decbin($delta - 1));
+                $dataFlow[] = "\t" . 'db %01' . sprintf("%06s", decbin($delta - 1));
                 $curAddress += $delta;
             }
 
@@ -97,17 +95,17 @@ function generateMemsaveRes($frames) {
         }
 
         // Extract last buffer
-        $commandsFlow[] = "\t" . 'db %00' . sprintf("%06s", decbin(count($dataBuf) - 1));
+        $dataFlow[] = "\t" . 'db %00' . sprintf("%06s", decbin(count($dataBuf) - 1));
         foreach ($dataBuf as $b) {
             $dataFlow[] = "\t" . 'db #' . sprintf("%02x", $b);
         }
 
         // End of frame
-        $commandsFlow[] = "\t" . 'db %11111111';
+        $dataFlow[] = "\t" . 'db %11111111';
 
         $generated[$key] = array(
             'filename' => 'res/' . sprintf("%04x", $key) . '.asm',
-            'data' => implode("\n", $commandsFlow) . "\n" . implode("\n", $dataFlow),
+            'data' => implode("\n", $dataFlow),
         );
     }
 
@@ -115,72 +113,60 @@ function generateMemsaveRes($frames) {
 }
 
 function memsavePlayer($keys) {
-    $player = "anm_hl	ld hl, anima_proc
-	ld a, (hl) : or a : jr nz, lab1
-	ld hl, anima_proc
-lab1	ld e, (hl) : inc hl
-	ld d, (hl) : inc hl
-	ld (anm_hl + 1), hl
-	ex de, hl
-						; determine data flow start
-	push hl
-lab2	ld a, (hl) : inc hl
-	inc a
-	jp nz, lab2
-	pop ix
-						; set start address
-	ld e,(hl) : inc hl
+    $player = "init	ld HL,FRAME_0000
+	call displayFrame
+	ld a,l 
+	cp low(FRAMES_END)
+	jp nz, 1f
+	ld a,h
+	cp high(FRAMES_END)
+	jp nz,1f
+	ld hl,FRAME_0000
+1	ld (init+1),hl
+	ret
+displayFrame	xor a : ld b,a
+	ld e,(hl) : inc hl ; Start screen address
 	ld d,(hl) : inc hl
-	ld b,a
-cycle
-	ld  a, (ix + 0)
-	inc ix
-
+cycle	ld  a,(hl)
+	inc hl
 	ld c,a
 	rla
-	jr nc,lab3
-
+	jp nc,2f
 	rlca		; cp  #80
-	ret c		; ret nc
-jmp100
+	ret c		; end of frame display
+	; long jump
 	ld  a,c
 	and #0f
 	add a,d : ld d,a
 	bit 4,c
-	jr  z, cycle
-	ld  c, #80				; additional jump +128 bytes
-	ex  de, hl
-	add hl, bc
-	ex  de, hl
+	jp  z, cycle
+	ld a,#80
+	add e
+	ld e,a
+	jp nc,cycle
+	inc d
 	jp  cycle
-						; end of frame		
-lab3	rlca
-	jr c,anc_jmp
-	inc c					; copy N bytes from flow to screen
+2	rlca
+	jp c,nearJmp
+	inc c		; copy N bytes to screen
 	ldir
 	jp cycle
-anc_jmp						; jump screen address
-	res 6,c
-	inc c
-	ex  de, hl
-	add hl, bc
-	ex  de, hl
+nearJmp	ld a,c
+	res 6,a
+	inc a
+	add e
+	ld e,a
+	jp nc,cycle
+	inc d
 	jp  cycle
-anima_proc
+	
 ";
 
-    $names = array();
-    $includes = array();
     foreach ($keys as $key) {
-        $key = sprintf("%04x", $key);
-
-        $includes[] = "FRAME_" . $key . "\t" . 'include "res/' . '/' . $key . '.asm"';
-        $names[] = "\t" . 'dw FRAME_' . $key;
+        $keyStr = sprintf("%04x", $key);
+        $player .= "FRAME_" . $keyStr . "\t" . 'include "res/' . $keyStr . '.asm"'."\n";
     }
-
-    $player .= implode("\n", $names);
-    $player .= "\n\tdw #0000\n\n";
-    $player .= implode("\n", $includes);
+    $player .= "FRAMES_END\n";
 
     return $player;
 }
