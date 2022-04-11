@@ -169,28 +169,19 @@ function generateBatchH(&$source) {
 }
 
 function fastPlayer($keys) {
-    $player = "anm_hl	ld hl, anm_db
-	ld a, (hl) : or a : jr nz, 1f
-	ld hl, anm_db			; revert to start of animation
-1	ld e, (hl) : inc hl
-	ld d, (hl) : inc hl
-	ld (anm_hl + 1), hl
-	ex de, hl
-	jp (hl)
-anm_db
+    $player = "init	jp frm0
 ";
 
-    $names = array();
-    $includes = array();
     foreach ($keys as $key) {
-        $key = sprintf("%04x", $key);
-        $includes[] = "FRAME_" . $key . "\t" . 'include "res/' . '/' . $key . '.asm"';
-        $names[] = "\t" . 'dw FRAME_' . $key;
+        $keyStr = sprintf("%04x", $key);
+        $nextKey = $key == count($keys) - 1 ? 0 : $key + 1;
+        $player .= "frm" . $key . "\tld hl,frm" . $nextKey . " : ld (init+1), hl : ld hl,FRAME_" . $keyStr . " : jp (hl)\n";
     }
 
-    $player .= implode("\n", $names);
-    $player .= "\n\tdb #00\n\n";
-    $player .= implode("\n", $includes);
+    foreach ($keys as $key) {
+        $keyStr = sprintf("%04x", $key);
+        $player .= "FRAME_" . $keyStr . "\t" . 'include "res/' . $keyStr . '.asm"' . "\n";
+    }
 
     return $player;
 }
