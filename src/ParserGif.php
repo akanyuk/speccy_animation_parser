@@ -33,9 +33,14 @@ class ParserGif {
         for ($y = 0; $y < $maxY; $y++) {
             for ($x = 0; $x < $maxX; $x++) {
                 list($byte, $address) = $this->proceedByteGIF($frame, $x, $y);
-                if ($byte === false) continue;
+                if ($byte === false) {
+                    continue;
+                }
 
-                if (!isset($result[$byte])) $result[$byte] = array();
+                if (!isset($result[$byte])) {
+                    $result[$byte] = array();
+                }
+
                 $result[$byte][] = $address;
             }
         }
@@ -48,10 +53,8 @@ class ParserGif {
         for ($i = 0; $i < 8; $i++) {
             $c = imagecolorsforindex($frame, imagecolorat($frame, $x * 8 + $i, $y));
             if ($c['red'] + $c['green'] + $c['blue'] > 391 || $c['alpha'] != 0) {
-                continue;
+                $byte += pow(2, 7 - $i);
             }
-
-            $byte += pow(2, 7 - $i);
         }
 
         $d = ($y & 0xc0) * 0x20 + ($y % 8) * 256 + ($y & 0x38) * 4 + $x;
