@@ -67,6 +67,11 @@ if (!empty($_FILES)) {
         BODY {
             font: 15px Verdana, Geneva, sans-serif;
         }
+
+        LABEL {
+            display: block;
+            padding: 1rem 0 0.5rem 0;
+        }
     </style>
 </head>
 <body>
@@ -78,14 +83,15 @@ if (!empty($_FILES)) {
         <label for="animation_file">GIF/ZIP file</label>
         <input type="file" name="animation_file" id="animation_file"/>
 
-        <br/>
-        <br/>
-        <label>&nbsp;</label>
+        <label for="screen_address">Screen start address: 16384 (default), 49152 (#c000), or any other integer value</label>
+        <input type="text" name="screen_address" id="screen_address"/>
+
+        <label></label>
         <input type="submit" name="parse" value="Parse"/>
     </fieldset>
 </form>
 
-<p>&copy; 2022, Andrey <a href="http://nyuk.retropc.ru">nyuk</a> Marinov</p>
+<p><small>&copy; 2022, Andrey <a href="http://nyuk.retropc.ru">nyuk</a> Marinov</small></p>
 
 </body>
 </html>
