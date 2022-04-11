@@ -9,7 +9,7 @@ Library for parsing GIF-file or ZIP-archive with scr-files into ZX Spectrum anim
 
 ## GIF-file requires
 
-* Two colors only: black (or above) paper, white (or above) ink
+* Two colors only: approximately black paper, approximately white ink
 * Without internal compression
   
 ## Online demo
