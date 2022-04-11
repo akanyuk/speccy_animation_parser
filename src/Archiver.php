@@ -23,7 +23,6 @@ class Archiver {
     }
 
     function Done() {
-        // Adding make.cmd
         $tpl = 'sjasmplus --inc=fast\. fast\test.asm' . "\n";
         $tpl .= 'sjasmplus --inc=memsave\. memsave\test.asm';
         $this->zip->addFromString('make.cmd', $tpl);

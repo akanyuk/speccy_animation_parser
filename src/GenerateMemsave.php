@@ -33,78 +33,81 @@ function generateMemsaveRes($frames) {
     $generated = array();
     foreach ($frames as $key => $frame) {
         if (empty($frame)) {
-            $generated[$key] = "\t" . 'db %11100000' . "\n";
+            $generated[$key] = "\t" . 'dw #4000'."\n";
+            $generated[$key] .= "\t" . 'db %11100000' . "\n";
             continue;
         }
 
-        // Repack data
+        // Repack frame
         $addresses = array();
-        foreach ($frame as $byte => $addr_array) foreach ($addr_array as $address) {
-            $addresses[$address] = $byte;
+        foreach ($frame as $byte => $addrArray) {
+            foreach ($addrArray as $address) {
+                $addresses[$address] = $byte;
+            }
         }
         ksort($addresses);
 
-        $data_flow = array();        // Поток данных сначала сохраняем в массив, потом разворачиваем в строку
-        $commands_flow = array();    // Поток команд сначала сохраняем в массив, потом разворачиваем в строку
-        $data_buf = array();        // Накопительный буфер для выводимых байтов
-        $cur_address = 0;            // Последний обработанный экранный адрес
+        $dataFlow = array();        // Поток данных сначала сохраняем в массив, потом разворачиваем в строку
+        $commandsFlow = array();    // Поток команд сначала сохраняем в массив, потом разворачиваем в строку
+        $dataBuf = array();         // Накопительный буфер для выводимых байтов
+        $curAddress = 0;            // Последний обработанный экранный адрес
         foreach ($addresses as $address => $byte) {
             // Initial address
-            if ($cur_address == 0) {
-                $data_flow[] = "\t" . 'dw #' . sprintf("%04x", 0x4000 + $address);
-                $data_buf[] = $byte;
-                $cur_address = $address + 1;
+            if ($curAddress == 0) {
+                $dataFlow[] = "\t" . 'dw #' . sprintf("%04x", 0x4000 + $address);
+                $dataBuf[] = $byte;
+                $curAddress = $address + 1;
                 continue;
             }
 
             // Simple add $data_buf value
-            if ($address == $cur_address && count($data_buf) < 32) {
-                $data_buf[] = $byte;
-                $cur_address = $address + 1;
+            if ($address == $curAddress && count($dataBuf) < 32) {
+                $dataBuf[] = $byte;
+                $curAddress = $address + 1;
                 continue;
             }
 
-            if (($address != $cur_address && !empty($data_buf)) || count($data_buf) == 64) {
-                $commands_flow[] = "\t" . 'db %00' . sprintf("%06s", decbin(count($data_buf) - 1));
+            if (($address != $curAddress && !empty($dataBuf)) || count($dataBuf) == 64) {
+                $commandsFlow[] = "\t" . 'db %00' . sprintf("%06s", decbin(count($dataBuf) - 1));
 
-                foreach ($data_buf as $b) {
-                    $data_flow[] = "\t" . 'db #' . sprintf("%02x", $b);
+                foreach ($dataBuf as $b) {
+                    $dataFlow[] = "\t" . 'db #' . sprintf("%02x", $b);
                 }
-                $data_buf = array();
+                $dataBuf = array();
             }
 
-            while ($address > $cur_address + 128) {
-                $delta = floor(($address - $cur_address) / 256);
+            while ($address > $curAddress + 128) {
+                $delta = floor(($address - $curAddress) / 256);
                 if ($delta > 15) $delta = 15;
-                $cur_address += $delta * 256;
-                $delta2 = $address >= $cur_address + 128 ? 0x10 : 0;
-                $cur_address += $delta2 ? 128 : 0;
+                $curAddress += $delta * 256;
+                $delta2 = $address >= $curAddress + 128 ? 0x10 : 0;
+                $curAddress += $delta2 ? 128 : 0;
 
-                $commands_flow[] = "\t" . 'db %101' . sprintf("%05s", decbin($delta + $delta2));
+                $commandsFlow[] = "\t" . 'db %101' . sprintf("%05s", decbin($delta + $delta2));
             }
 
-            while ($cur_address != $address) {
-                $delta = $address - $cur_address > 64 ? 64 : $address - $cur_address;
-                $commands_flow[] = "\t" . 'db %01' . sprintf("%06s", decbin($delta - 1));
-                $cur_address += $delta;
+            while ($curAddress != $address) {
+                $delta = $address - $curAddress > 64 ? 64 : $address - $curAddress;
+                $commandsFlow[] = "\t" . 'db %01' . sprintf("%06s", decbin($delta - 1));
+                $curAddress += $delta;
             }
 
-            $data_buf[] = $byte;
-            $cur_address++;
+            $dataBuf[] = $byte;
+            $curAddress++;
         }
 
         // Extract last buffer
-        $commands_flow[] = "\t" . 'db %00' . sprintf("%06s", decbin(count($data_buf) - 1));
-        foreach ($data_buf as $b) {
-            $data_flow[] = "\t" . 'db #' . sprintf("%02x", $b);
+        $commandsFlow[] = "\t" . 'db %00' . sprintf("%06s", decbin(count($dataBuf) - 1));
+        foreach ($dataBuf as $b) {
+            $dataFlow[] = "\t" . 'db #' . sprintf("%02x", $b);
         }
 
         // End of frame
-        $commands_flow[] = "\t" . 'db %11111111';
+        $commandsFlow[] = "\t" . 'db %11111111';
 
         $generated[$key] = array(
             'filename' => 'res/' . sprintf("%04x", $key) . '.asm',
-            'data' => implode("\n", $commands_flow) . "\n" . implode("\n", $data_flow),
+            'data' => implode("\n", $commandsFlow) . "\n" . implode("\n", $dataFlow),
         );
     }
 
