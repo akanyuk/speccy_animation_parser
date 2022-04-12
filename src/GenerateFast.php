@@ -169,14 +169,34 @@ function generateBatchH(&$source, $startAddress) {
 }
 
 function fastPlayer($keys) {
-    $player = "init	jp frm0
-";
+    $player = 'DisplayFrame    ld hl,FRAME_0000
+                jp(hl)
 
+NextFrame	ld HL,FRAMES
+	inc hl : inc hl
+	ld a,l
+	cp low(FRAMES_END)
+	jp nz, 1f
+	ld a,h
+	cp high(FRAMES_END)
+	jp nz,1f
+	ld hl,FRAMES
+1	ld (NextFrame+1),hl
+	ld e, (hl)
+	inc hl
+	ld d,(hl)
+	ex de,hl
+	ld (DisplayFrame+1),hl
+	ret
+
+';
+
+    $player .= "FRAMES\n";
     foreach ($keys as $key) {
         $keyStr = sprintf("%04x", $key);
-        $nextKey = $key == count($keys) - 1 ? 0 : $key + 1;
-        $player .= "frm" . $key . "\tld hl,frm" . $nextKey . " : ld (init+1), hl : ld hl,FRAME_" . $keyStr . " : jp (hl)\n";
+        $player .= "\t" . 'dw FRAME_' . $keyStr . "\n";
     }
+    $player .= "FRAMES_END\n";
 
     foreach ($keys as $key) {
         $keyStr = sprintf("%04x", $key);
@@ -187,22 +207,29 @@ function fastPlayer($keys) {
 }
 
 function fastTest() {
-    return "	device zxspectrum128
+    return '	device zxspectrum128
 
 	org #5d00
-	ld sp,$-2
-	ld hl,#5800
-	ld de,#5801
-	ld bc,#02ff
-	ld (hl),%01000111
+	ld sp, $-2
+	ld hl, #5800
+	ld de, #5801
+	ld bc, #02ff
+	ld (hl), %01000111
 	ldir
-	xor a : out (#fe),a
+	xor a : out (#fe), a
 	ei
-	
-_LOOP	call _TEST : halt : jr _LOOP 
 
-_TEST	include \"player.asm\"
-	display /d, \"Animation size: \", $-_TEST
-	savebin \"fast.bin\", _TEST, $-_TEST
-	savesna \"fast.sna\", #5d00";
+1	call fast.DisplayFrame
+	call fast.NextFrame
+	halt
+	jr 1b
+
+DATA	module fast
+	include "player.asm"
+	endmodule
+
+	display /d, "Animation size: ", $-DATA
+	savebin "fast.bin", DATA, $-DATA
+	savesna "fast.sna", #5d00
+';
 }
