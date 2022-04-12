@@ -2,11 +2,11 @@
 
 namespace SpeccyAnimationParser;
 
-function GenerateFast($frames) {
+function GenerateFast($frames, $startAddress = 0) {
     // Removing 0-frame
     array_shift($frames);
 
-    $generated = generateFastRes($frames);
+    $generated = generateFastRes($frames, $startAddress);
 
     $generated[] = array(
         'filename' => 'player.asm',
@@ -21,7 +21,7 @@ function GenerateFast($frames) {
     return $generated;
 }
 
-function generateFastRes($frames) {
+function generateFastRes($frames, $startAddress) {
     $generated = array();
     foreach ($frames as $key => $frame) {
         $output = '';
@@ -38,13 +38,13 @@ function generateFastRes($frames) {
 
             $addresses = array_reverse($addresses, true);
 
-            $output .= generateBatchV($addresses);
-            $output .= generateBatchH($addresses);
+            $output .= generateBatchV($addresses, $startAddress);
+            $output .= generateBatchH($addresses, $startAddress);
 
             // Формируем оставшиеся фрагменты:
             // ld (addr1), a
             foreach ($addresses as $address) {
-                $output .= "\t\tld (#" . dechex(0x4000 + $address) . "), a\n";
+                $output .= "\t\tld (#" . dechex($startAddress + $address) . "), a\n";
             }
         }
 
@@ -65,7 +65,7 @@ function generateFastRes($frames) {
 /* Формирует из массива $source фрагменты типа:
  * ld hl, addr : ld (hl), a : inc h : ld (hl), a
 */
-function generateBatchV(&$source) {
+function generateBatchV(&$source, $startAddress) {
     sort($source);
 
     $output = '';
@@ -89,7 +89,7 @@ function generateBatchV(&$source) {
                     if (in_array($a, $batch)) unset($source[$k]);
                 }
 
-                $output .= "\t\tld hl, #" . dechex(0x4000 + array_shift($batch)) . "\n";
+                $output .= "\t\tld hl, #" . dechex($startAddress + array_shift($batch)) . "\n";
                 $output .= "\t\tld (hl), a\n";
 
                 for ($i = 0; $i < count($batch); $i++) {
@@ -112,7 +112,7 @@ function generateBatchV(&$source) {
 /* Формирует из массива $source фрагменты типа:
  * ld hl, addr : ld (hl), a : inc hl : ld (hl), a
 */
-function generateBatchH(&$source) {
+function generateBatchH(&$source, $startAddress) {
     sort($source);
 
     $output = '';
@@ -145,9 +145,9 @@ function generateBatchH(&$source) {
                         $processedDE = true;
                     }
 
-                    $output .= "\t\tld (#" . dechex(0x4000 + $batch[0]) . "), de\n";
+                    $output .= "\t\tld (#" . dechex($startAddress + $batch[0]) . "), de\n";
                 } else {
-                    $output .= "\t\tld hl, #" . dechex(0x4000 + array_shift($batch)) . "\n";
+                    $output .= "\t\tld hl, #" . dechex($startAddress + array_shift($batch)) . "\n";
                     $output .= "\t\tld (hl), a\n";
 
                     for ($i = 0; $i < count($batch); $i++) {
@@ -190,13 +190,13 @@ function fastTest() {
     return "	device zxspectrum128
 
 	org #5d00
-	ld sp, $-2
-	ld hl, #5800
-	ld de, #5801
-	ld bc, #02ff
-	ld (hl), %01000111
+	ld sp,$-2
+	ld hl,#5800
+	ld de,#5801
+	ld bc,#02ff
+	ld (hl),%01000111
 	ldir
-	xor a : out (#fe), a
+	xor a : out (#fe),a
 	ei
 	
 _LOOP	call _TEST : halt : jr _LOOP 

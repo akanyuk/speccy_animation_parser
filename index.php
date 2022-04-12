@@ -42,9 +42,11 @@ if (!empty($_FILES)) {
             exit('Unknown animation type.');
     }
 
+    $startAddress = isset($_POST['screen_address']) ? intval($_POST['screen_address']) : 0;
+
     $archiver = new Archiver();
-    $archiver->AddFiles(GenerateFast($frames), 'fast');
-    $archiver->AddFiles(GenerateMemsave($frames), 'memsave');
+    $archiver->AddFiles(GenerateFast($frames, $startAddress), 'fast');
+    $archiver->AddFiles(GenerateMemsave($frames, $startAddress), 'memsave');
     $archiver->AddFiles(GenerateDiff($frames), 'diff');
 
     $content = $archiver->Done();
@@ -56,9 +58,7 @@ if (!empty($_FILES)) {
     exit;
 }
 ?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ru" lang="ru">
+<html lang="ru">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <meta name="language" content="ru"/>
@@ -83,8 +83,8 @@ if (!empty($_FILES)) {
         <label for="animation_file">GIF/ZIP file</label>
         <input type="file" name="animation_file" id="animation_file"/>
 
-        <label for="screen_address">Screen start address: 16384 (default), 49152 (#c000), or any other integer value</label>
-        <input type="text" name="screen_address" id="screen_address"/>
+        <label for="screen_address">Screen start address: 16384 (default), 49152 (#c000), or any other integer. Included test player work properly only with 16384 value</label>
+        <input type="number" min="0" max="65535" name="screen_address" value="16384" id="screen_address"/>
 
         <label></label>
         <input type="submit" name="parse" value="Parse"/>

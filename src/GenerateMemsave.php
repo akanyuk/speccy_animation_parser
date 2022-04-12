@@ -9,7 +9,7 @@ namespace SpeccyAnimationParser;
     %101yxxxx - сдвинуть указатель адреса экрана #100 байт xxxxx раз (0-15). Если установлен бит Y, то сдвигаемся еще на 128 байт
     %11xxxxxx - конец фрейма
 */
-function GenerateMemsave($frames) {
+function GenerateMemsave($frames, $startAddress = 0) {
     // Removing 0-frame
     array_shift($frames);
 
@@ -22,7 +22,7 @@ function GenerateMemsave($frames) {
 
     $generated[] = array(
         'filename' => 'test.asm',
-        'data' => memsaveTest(),
+        'data' => memsaveTest($startAddress),
     );
 
     return $generated;
@@ -32,7 +32,7 @@ function generateMemsaveRes($frames) {
     $generated = array();
     foreach ($frames as $key => $frame) {
         if (empty($frame)) {
-            $generated[$key] = "\t" . 'dw #4000'."\n";
+            $generated[$key] = "\t" . 'dw 0' . "\n";
             $generated[$key] .= "\t" . 'db %11100000' . "\n";
             continue;
         }
@@ -52,7 +52,7 @@ function generateMemsaveRes($frames) {
         foreach ($addresses as $address => $byte) {
             // Initial address
             if ($curAddress == 0) {
-                $dataFlow[] = "\t" . 'dw #' . sprintf("%04x", 0x4000 + $address);
+                $dataFlow[] = "\t" . 'dw #' . sprintf("%04x", $address);
                 $dataBuf[] = $byte;
                 $curAddress = $address + 1;
                 continue;
@@ -113,7 +113,8 @@ function generateMemsaveRes($frames) {
 }
 
 function memsavePlayer($keys) {
-    $player = "init	ld HL,FRAME_0000
+    $player = "	; de : starting screen address (#4000, #c000)
+init	ld HL,FRAME_0000
 	call displayFrame
 	ld a,l 
 	cp low(FRAMES_END)
@@ -124,9 +125,12 @@ function memsavePlayer($keys) {
 	ld hl,FRAME_0000
 1	ld (init+1),hl
 	ret
-displayFrame	xor a : ld b,a
-	ld e,(hl) : inc hl ; Start screen address
-	ld d,(hl) : inc hl
+displayFrame	ld c,(hl) : inc hl ; Screen shift
+	ld b,(hl) : inc hl
+	ex de,hl
+	add hl,bc
+	ex de,hl
+	xor a : ld b,a
 cycle	ld  a,(hl)
 	inc hl
 	ld c,a
@@ -164,27 +168,31 @@ nearJmp	ld a,c
 
     foreach ($keys as $key) {
         $keyStr = sprintf("%04x", $key);
-        $player .= "FRAME_" . $keyStr . "\t" . 'include "res/' . $keyStr . '.asm"'."\n";
+        $player .= "FRAME_" . $keyStr . "\t" . 'include "res/' . $keyStr . '.asm"' . "\n";
     }
     $player .= "FRAMES_END\n";
 
     return $player;
 }
 
-function memsaveTest() {
+function memsaveTest($screenAddress) {
     return "	device zxspectrum128
 
 	org #5d00
-	ld sp, $-2
-	ld hl, #5800
-	ld de, #5801
-	ld bc, #02ff
-	ld (hl), %01000111
+	ld sp,$-2
+	ld hl,#5800
+	ld de,#5801
+	ld bc,#02ff
+	ld (hl),%01000111
 	ldir
-	xor a : out (#fe), a
+	xor a : out (#fe),a
 	ei
 	
-_LOOP	call _TEST : halt : jr _LOOP 
+_LOOP
+	ld de,#" . sprintf("%04x", $screenAddress) . "	
+	call _TEST 
+	halt 
+	jr _LOOP 
 
 _TEST	include \"player.asm\"
 	display /d, \"Animation size: \", $-_TEST
