@@ -4,7 +4,7 @@ Library for parsing GIF-file or ZIP-archive with scr-files into ZX Spectrum anim
 
 ## Requires 
 
-* PHP 5.4 or above
+* PHP 5.6 or above
 * Composer
 
 ## GIF-file requires

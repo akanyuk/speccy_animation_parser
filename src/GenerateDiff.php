@@ -1,7 +1,5 @@
 <?php
 
-namespace SpeccyAnimationParser;
-
 /**
  * @desc Generate differences between frame and previous frame as array of text files
  * @param $frames array

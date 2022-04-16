@@ -1,9 +1,5 @@
 <?php
 
-namespace SpeccyAnimationParser;
-
-use ZipArchive;
-
 class Archiver {
     private $zip;
     private $tmpFile;
@@ -14,19 +10,15 @@ class Archiver {
         $this->zip->open($this->tmpFile, ZIPARCHIVE::CREATE);
     }
 
-    function AddFiles($files, $prefix = "") {
-        $prefix = $prefix == '' ? $prefix : $prefix.'/';
+    function AddFiles($files, $dirPrefix = "") {
+        $dirPrefix = $dirPrefix == '' ? $dirPrefix : $dirPrefix.'/';
 
         foreach ($files as $file) {
-            $this->zip->addFromString($prefix.$file['filename'], $file['data']);
+            $this->zip->addFromString($dirPrefix.$file['filename'], $file['data']);
         }
     }
 
     function Done() {
-        $tpl = 'sjasmplus --inc=fast\. fast\test.asm' . "\n";
-        $tpl .= 'sjasmplus --inc=memsave\. memsave\test.asm';
-        $this->zip->addFromString('make.cmd', $tpl);
-
         $this->zip->close();
 
         $result = file_get_contents($this->tmpFile);

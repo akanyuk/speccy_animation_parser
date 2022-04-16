@@ -1,20 +1,13 @@
 <?php
 
-use SpeccyAnimationParser\Archiver;
-use SpeccyAnimationParser\ParserGif;
-use SpeccyAnimationParser\ParserScrZip;
-use function SpeccyAnimationParser\GenerateDiff;
-use function SpeccyAnimationParser\GenerateFast;
-use function SpeccyAnimationParser\GenerateMemsave;
-
 require 'vendor/autoload.php';
 
-require('src/Archiver.php');
-require('src/ParserGif.php');
-require('src/ParserScrZip.php');
-require('src/GenerateDiff.php');
-require('src/GenerateFast.php');
-require('src/GenerateMemsave.php');
+require(dirname(__FILE__) . '/src/Archiver.php');
+require(dirname(__FILE__) . '/src/ParserGif.php');
+require(dirname(__FILE__) . '/src/ParserScrZip.php');
+require(dirname(__FILE__) . '/src/GenerateDiff.php');
+require(dirname(__FILE__) . '/src/GenerateFast.php');
+require(dirname(__FILE__) . '/src/GenerateMemsave.php');
 
 if (!empty($_FILES)) {
     ini_set('max_execution_time', 300);
@@ -45,9 +38,17 @@ if (!empty($_FILES)) {
     $startAddress = isset($_POST['screen_address']) ? intval($_POST['screen_address']) : 0;
 
     $archiver = new Archiver();
+    $archiver->AddFiles(GenerateDiff($frames), 'diff');
     $archiver->AddFiles(GenerateFast($frames, $startAddress), 'fast');
     $archiver->AddFiles(GenerateMemsave($frames, $startAddress), 'memsave');
-    $archiver->AddFiles(GenerateDiff($frames), 'diff');
+
+    $makeCmd = 'sjasmplus --inc=fast\. fast\test.asm' . "\n";
+    $makeCmd .= 'sjasmplus --inc=memsave\. memsave\test.asm' . "\n";
+    $archiver->AddFiles(array(
+        array('data' => $makeCmd,
+            'filename' => 'make.cmd',
+        ),
+    ));
 
     $content = $archiver->Done();
 
@@ -83,7 +84,8 @@ if (!empty($_FILES)) {
         <label for="animation_file">GIF/ZIP file</label>
         <input type="file" name="animation_file" id="animation_file"/>
 
-        <label for="screen_address">Screen start address: 16384 (default), 49152 (#c000), or any other integer. Included test player work properly only with 16384 value</label>
+        <label for="screen_address">Screen start address: 16384 (default), 49152 (#c000), or any other integer. Included
+            test player work properly only with 16384 value</label>
         <input type="number" min="0" max="65535" name="screen_address" value="16384" id="screen_address"/>
 
         <label></label>

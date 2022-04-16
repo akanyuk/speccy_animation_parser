@@ -1,7 +1,5 @@
 <?php
 
-namespace SpeccyAnimationParser;
-
 function GenerateFast($frames, $startAddress = 0) {
     // Removing 0-frame
     array_shift($frames);
@@ -28,11 +26,11 @@ function generateFastRes($frames, $startAddress) {
         $curA = -1;
         foreach ($frame as $byte => $addresses) {
             if ($byte == 0) {
-                $output .= "\t\txor a\n";
+                $output .= "\txor a\n";
             } elseif ($byte - $curA == 1) {
-                $output .= "\t\tinc a\n";
+                $output .= "\tinc a\n";
             } else {
-                $output .= "\t\tld a, " . $byte . "\n";
+                $output .= "\tld a, " . $byte . "\n";
             }
             $curA = $byte;
 
@@ -44,14 +42,11 @@ function generateFastRes($frames, $startAddress) {
             // Формируем оставшиеся фрагменты:
             // ld (addr1), a
             foreach ($addresses as $address) {
-                $output .= "\t\tld (#" . dechex($startAddress + $address) . "), a\n";
+                $output .= "\tld (#" . dechex($startAddress + $address) . "), a\n";
             }
         }
 
-        $output .= "\t\tret\n";
-
-        // Finalize with current frame
-        $generated[$key]['source'] = $output;
+        $output .= "\tret\n";
 
         $generated[$key] = array(
             'filename' => 'res/' . sprintf("%04x", $key) . '.asm',
@@ -89,12 +84,12 @@ function generateBatchV(&$source, $startAddress) {
                     if (in_array($a, $batch)) unset($source[$k]);
                 }
 
-                $output .= "\t\tld hl, #" . dechex($startAddress + array_shift($batch)) . "\n";
-                $output .= "\t\tld (hl), a\n";
+                $output .= "\tld hl, #" . dechex($startAddress + array_shift($batch)) . "\n";
+                $output .= "\tld (hl), a\n";
 
                 for ($i = 0; $i < count($batch); $i++) {
-                    $output .= "\t\tinc h\n";
-                    $output .= "\t\tld (hl), a\n";
+                    $output .= "\tinc h\n";
+                    $output .= "\tld (hl), a\n";
                 }
 
                 $isBatchFound = true;
@@ -140,19 +135,19 @@ function generateBatchH(&$source, $startAddress) {
 
                 if (count($batch) == 2) {
                     if (!$processedDE) {
-                        $output .= "\t\tld d,a\n";
-                        $output .= "\t\tld e,a\n";
+                        $output .= "\tld d,a\n";
+                        $output .= "\tld e,a\n";
                         $processedDE = true;
                     }
 
-                    $output .= "\t\tld (#" . dechex($startAddress + $batch[0]) . "), de\n";
+                    $output .= "\tld (#" . dechex($startAddress + $batch[0]) . "), de\n";
                 } else {
-                    $output .= "\t\tld hl, #" . dechex($startAddress + array_shift($batch)) . "\n";
-                    $output .= "\t\tld (hl), a\n";
+                    $output .= "\tld hl, #" . dechex($startAddress + array_shift($batch)) . "\n";
+                    $output .= "\tld (hl), a\n";
 
                     for ($i = 0; $i < count($batch); $i++) {
-                        $output .= "\t\tinc hl\n";
-                        $output .= "\t\tld (hl), a\n";
+                        $output .= "\tinc hl\n";
+                        $output .= "\tld (hl), a\n";
                     }
                 }
 

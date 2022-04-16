@@ -1,9 +1,5 @@
 <?php
 
-namespace SpeccyAnimationParser;
-
-use ChromePhp;
-use Exception;
 use GifFrameExtractor\GifFrameExtractor;
 
 class ParserGif {
