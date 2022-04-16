@@ -21,7 +21,11 @@
   },
   "autoload": {
     "psr-0": {
-      "SpeccyAnimationParser": "src"
+      "Archiver": "src",
+      "GenerateFast": "src",
+      "GenerateMemsave": "src",
+      "ParserGif": "src",
+      "ParserScrZip": "src"
     }
   }
 }

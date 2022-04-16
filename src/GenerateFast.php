@@ -1,170 +1,171 @@
 <?php
 
-function GenerateFast($frames, $startAddress = 0) {
-    // Removing 0-frame
-    array_shift($frames);
+class GenerateFast {
+    static function Generate($frames, $startAddress = 0) {
+        // Removing 0-frame
+        array_shift($frames);
 
-    $generated = generateFastRes($frames, $startAddress);
+        $generated = self::generateFastRes($frames, $startAddress);
 
-    $generated[] = array(
-        'filename' => 'player.asm',
-        'data' => fastPlayer(array_keys($frames)),
-    );
-
-    $generated[] = array(
-        'filename' => 'test.asm',
-        'data' => fastTest(),
-    );
-
-    return $generated;
-}
-
-function generateFastRes($frames, $startAddress) {
-    $generated = array();
-    foreach ($frames as $key => $frame) {
-        $output = '';
-        $curA = -1;
-        foreach ($frame as $byte => $addresses) {
-            if ($byte == 0) {
-                $output .= "\txor a\n";
-            } elseif ($byte - $curA == 1) {
-                $output .= "\tinc a\n";
-            } else {
-                $output .= "\tld a, " . $byte . "\n";
-            }
-            $curA = $byte;
-
-            $addresses = array_reverse($addresses, true);
-
-            $output .= generateBatchV($addresses, $startAddress);
-            $output .= generateBatchH($addresses, $startAddress);
-
-            // Формируем оставшиеся фрагменты:
-            // ld (addr1), a
-            foreach ($addresses as $address) {
-                $output .= "\tld (#" . dechex($startAddress + $address) . "), a\n";
-            }
-        }
-
-        $output .= "\tret\n";
-
-        $generated[$key] = array(
-            'filename' => 'res/' . sprintf("%04x", $key) . '.asm',
-            'data' => $output,
+        $generated[] = array(
+            'filename' => 'player.asm',
+            'data' => self::fastPlayer(array_keys($frames)),
         );
+
+        $generated[] = array(
+            'filename' => 'test.asm',
+            'data' => self::fastTest(),
+        );
+
+        return $generated;
     }
 
-    return $generated;
-}
+    static function generateFastRes($frames, $startAddress) {
+        $generated = array();
+        foreach ($frames as $key => $frame) {
+            $output = '';
+            $curA = -1;
+            foreach ($frame as $byte => $addresses) {
+                if ($byte == 0) {
+                    $output .= "\txor a\n";
+                } elseif ($byte - $curA == 1) {
+                    $output .= "\tinc a\n";
+                } else {
+                    $output .= "\tld a, " . $byte . "\n";
+                }
+                $curA = $byte;
 
-/* Формирует из массива $source фрагменты типа:
- * ld hl, addr : ld (hl), a : inc h : ld (hl), a
-*/
-function generateBatchV(&$source, $startAddress) {
-    sort($source);
+                $addresses = array_reverse($addresses, true);
 
-    $output = '';
-    while (true) {
-        $isBatchFound = false;
+                $output .= self::generateBatchV($addresses, $startAddress);
+                $output .= self::generateBatchH($addresses, $startAddress);
 
-        foreach ($source as $address) {
-            $batch = array();
-
-            while (true) {
-                if (!in_array($address, $source)) break;
-
-                $batch[] = $address;
-                $address += 0x100;
+                // Формируем оставшиеся фрагменты:
+                // ld (addr1), a
+                foreach ($addresses as $address) {
+                    $output .= "\tld (#" . dechex($startAddress + $address) . "), a\n";
+                }
             }
 
-            // Batch end
-            if (count($batch) > 2) {
-                // Remove batch addresses from source
-                foreach ($source as $k => $a) {
-                    if (in_array($a, $batch)) unset($source[$k]);
-                }
+            $output .= "\tret\n";
 
-                $output .= "\tld hl, #" . dechex($startAddress + array_shift($batch)) . "\n";
-                $output .= "\tld (hl), a\n";
-
-                for ($i = 0; $i < count($batch); $i++) {
-                    $output .= "\tinc h\n";
-                    $output .= "\tld (hl), a\n";
-                }
-
-                $isBatchFound = true;
-            }
+            $generated[$key] = array(
+                'filename' => 'res/' . sprintf("%04x", $key) . '.asm',
+                'data' => $output,
+            );
         }
 
-        if (!$isBatchFound) {
-            break;
-        }
+        return $generated;
     }
 
-    return $output;
-}
+    /* Формирует из массива $source фрагменты типа:
+     * ld hl, addr : ld (hl), a : inc h : ld (hl), a
+    */
+    static function generateBatchV(&$source, $startAddress) {
+        sort($source);
 
-/* Формирует из массива $source фрагменты типа:
- * ld hl, addr : ld (hl), a : inc hl : ld (hl), a
-*/
-function generateBatchH(&$source, $startAddress) {
-    sort($source);
+        $output = '';
+        while (true) {
+            $isBatchFound = false;
 
-    $output = '';
-    $processedDE = false;
+            foreach ($source as $address) {
+                $batch = array();
 
-    while (true) {
-        $isBatchFound = false;
+                while (true) {
+                    if (!in_array($address, $source)) break;
 
-        foreach ($source as $address) {
-            $batch = array();
-
-            while (true) {
-                if (!in_array($address, $source)) break;
-
-                $batch[] = $address;
-                $address++;
-            }
-
-            // Batch end
-            if (count($batch) >= 2) {
-                // Remove batch addresses from source
-                foreach ($source as $k => $a) {
-                    if (in_array($a, $batch)) unset($source[$k]);
+                    $batch[] = $address;
+                    $address += 0x100;
                 }
 
-                if (count($batch) == 2) {
-                    if (!$processedDE) {
-                        $output .= "\tld d,a\n";
-                        $output .= "\tld e,a\n";
-                        $processedDE = true;
+                // Batch end
+                if (count($batch) > 2) {
+                    // Remove batch addresses from source
+                    foreach ($source as $k => $a) {
+                        if (in_array($a, $batch)) unset($source[$k]);
                     }
 
-                    $output .= "\tld (#" . dechex($startAddress + $batch[0]) . "), de\n";
-                } else {
                     $output .= "\tld hl, #" . dechex($startAddress + array_shift($batch)) . "\n";
                     $output .= "\tld (hl), a\n";
 
                     for ($i = 0; $i < count($batch); $i++) {
-                        $output .= "\tinc hl\n";
+                        $output .= "\tinc h\n";
                         $output .= "\tld (hl), a\n";
                     }
-                }
 
-                $isBatchFound = true;
+                    $isBatchFound = true;
+                }
+            }
+
+            if (!$isBatchFound) {
+                break;
             }
         }
 
-        if (!$isBatchFound) {
-            break;
-        }
+        return $output;
     }
 
-    return $output;
-}
+    /* Формирует из массива $source фрагменты типа:
+     * ld hl, addr : ld (hl), a : inc hl : ld (hl), a
+    */
+    static function generateBatchH(&$source, $startAddress) {
+        sort($source);
 
-function fastPlayer($keys) {
-    $player = 'DisplayFrame    ld hl,FRAME_0000
+        $output = '';
+        $processedDE = false;
+
+        while (true) {
+            $isBatchFound = false;
+
+            foreach ($source as $address) {
+                $batch = array();
+
+                while (true) {
+                    if (!in_array($address, $source)) break;
+
+                    $batch[] = $address;
+                    $address++;
+                }
+
+                // Batch end
+                if (count($batch) >= 2) {
+                    // Remove batch addresses from source
+                    foreach ($source as $k => $a) {
+                        if (in_array($a, $batch)) unset($source[$k]);
+                    }
+
+                    if (count($batch) == 2) {
+                        if (!$processedDE) {
+                            $output .= "\tld d,a\n";
+                            $output .= "\tld e,a\n";
+                            $processedDE = true;
+                        }
+
+                        $output .= "\tld (#" . dechex($startAddress + $batch[0]) . "), de\n";
+                    } else {
+                        $output .= "\tld hl, #" . dechex($startAddress + array_shift($batch)) . "\n";
+                        $output .= "\tld (hl), a\n";
+
+                        for ($i = 0; $i < count($batch); $i++) {
+                            $output .= "\tinc hl\n";
+                            $output .= "\tld (hl), a\n";
+                        }
+                    }
+
+                    $isBatchFound = true;
+                }
+            }
+
+            if (!$isBatchFound) {
+                break;
+            }
+        }
+
+        return $output;
+    }
+
+    static function fastPlayer($keys) {
+        $player = 'DisplayFrame    ld hl,FRAME_0000
                 jp(hl)
 
 NextFrame	ld HL,FRAMES
@@ -186,23 +187,23 @@ NextFrame	ld HL,FRAMES
 
 ';
 
-    $player .= "FRAMES\n";
-    foreach ($keys as $key) {
-        $keyStr = sprintf("%04x", $key);
-        $player .= "\t" . 'dw FRAME_' . $keyStr . "\n";
+        $player .= "FRAMES\n";
+        foreach ($keys as $key) {
+            $keyStr = sprintf("%04x", $key);
+            $player .= "\t" . 'dw FRAME_' . $keyStr . "\n";
+        }
+        $player .= "FRAMES_END\n";
+
+        foreach ($keys as $key) {
+            $keyStr = sprintf("%04x", $key);
+            $player .= "FRAME_" . $keyStr . "\t" . 'include "res/' . $keyStr . '.asm"' . "\n";
+        }
+
+        return $player;
     }
-    $player .= "FRAMES_END\n";
 
-    foreach ($keys as $key) {
-        $keyStr = sprintf("%04x", $key);
-        $player .= "FRAME_" . $keyStr . "\t" . 'include "res/' . $keyStr . '.asm"' . "\n";
-    }
-
-    return $player;
-}
-
-function fastTest() {
-    return '	device zxspectrum128
+    static function fastTest() {
+        return '	device zxspectrum128
 
 	org #5d00
 	ld sp, $-2
@@ -227,4 +228,5 @@ DATA	module fast
 	savebin "fast.bin", DATA, $-DATA
 	savesna "fast.sna", #5d00
 ';
+    }
 }

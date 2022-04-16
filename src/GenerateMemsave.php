@@ -7,111 +7,113 @@
     %101yxxxx - сдвинуть указатель адреса экрана #100 байт xxxxx раз (0-15). Если установлен бит Y, то сдвигаемся еще на 128 байт
     %11xxxxxx - конец фрейма
 */
-function GenerateMemsave($frames, $startAddress = 0) {
-    // Removing 0-frame
-    array_shift($frames);
 
-    $generated = generateMemsaveRes($frames);
+class GenerateMemsave {
+    static function Generate($frames, $startAddress = 0) {
+        // Removing 0-frame
+        array_shift($frames);
 
-    $generated[] = array(
-        'filename' => 'player.asm',
-        'data' => memsavePlayer(array_keys($frames)),
-    );
+        $generated = self::generateMemsaveRes($frames);
 
-    $generated[] = array(
-        'filename' => 'test.asm',
-        'data' => memsaveTest($startAddress),
-    );
-
-    return $generated;
-}
-
-function generateMemsaveRes($frames) {
-    $generated = array();
-    foreach ($frames as $key => $frame) {
-        if (empty($frame)) {
-            $generated[$key] = "\t" . 'dw 0' . "\n";
-            $generated[$key] .= "\t" . 'db %11100000' . "\n";
-            continue;
-        }
-
-        // Repack frame
-        $addresses = array();
-        foreach ($frame as $byte => $addrArray) {
-            foreach ($addrArray as $address) {
-                $addresses[$address] = $byte;
-            }
-        }
-        ksort($addresses);
-
-        $dataFlow = array();        // Поток данных сначала сохраняем в массив, потом разворачиваем в строку
-        $dataBuf = array();         // Накопительный буфер для выводимых байтов
-        $curAddress = 0;            // Последний обработанный экранный адрес
-        foreach ($addresses as $address => $byte) {
-            // Initial address
-            if ($curAddress == 0) {
-                $dataFlow[] = "\t" . 'dw #' . sprintf("%04x", $address);
-                $dataBuf[] = $byte;
-                $curAddress = $address + 1;
-                continue;
-            }
-
-            // Simple add $data_buf value
-            if ($address == $curAddress && count($dataBuf) < 32) {
-                $dataBuf[] = $byte;
-                $curAddress = $address + 1;
-                continue;
-            }
-
-            if (($address != $curAddress && !empty($dataBuf)) || count($dataBuf) == 64) {
-                $dataFlow[] = "\t" . 'db %00' . sprintf("%06s", decbin(count($dataBuf) - 1));
-
-                foreach ($dataBuf as $b) {
-                    $dataFlow[] = "\t" . 'db #' . sprintf("%02x", $b);
-                }
-                $dataBuf = array();
-            }
-
-            while ($address > $curAddress + 128) {
-                $delta = floor(($address - $curAddress) / 256);
-                if ($delta > 15) $delta = 15;
-                $curAddress += $delta * 256;
-                $delta2 = $address >= $curAddress + 128 ? 0x10 : 0;
-                $curAddress += $delta2 ? 128 : 0;
-
-                $dataFlow[] = "\t" . 'db %101' . sprintf("%05s", decbin($delta + $delta2));
-            }
-
-            while ($curAddress != $address) {
-                $delta = $address - $curAddress > 64 ? 64 : $address - $curAddress;
-                $dataFlow[] = "\t" . 'db %01' . sprintf("%06s", decbin($delta - 1));
-                $curAddress += $delta;
-            }
-
-            $dataBuf[] = $byte;
-            $curAddress++;
-        }
-
-        // Extract last buffer
-        $dataFlow[] = "\t" . 'db %00' . sprintf("%06s", decbin(count($dataBuf) - 1));
-        foreach ($dataBuf as $b) {
-            $dataFlow[] = "\t" . 'db #' . sprintf("%02x", $b);
-        }
-
-        // End of frame
-        $dataFlow[] = "\t" . 'db %11111111';
-
-        $generated[$key] = array(
-            'filename' => 'res/' . sprintf("%04x", $key) . '.asm',
-            'data' => implode("\n", $dataFlow),
+        $generated[] = array(
+            'filename' => 'player.asm',
+            'data' => self::memsavePlayer(array_keys($frames)),
         );
+
+        $generated[] = array(
+            'filename' => 'test.asm',
+            'data' => self::memsaveTest($startAddress),
+        );
+
+        return $generated;
     }
 
-    return $generated;
-}
+    static function generateMemsaveRes($frames) {
+        $generated = array();
+        foreach ($frames as $key => $frame) {
+            if (empty($frame)) {
+                $generated[$key] = "\t" . 'dw 0' . "\n";
+                $generated[$key] .= "\t" . 'db %11100000' . "\n";
+                continue;
+            }
 
-function memsavePlayer($keys) {
-    $player = '	; de : starting screen address (#4000, #c000, etc...)
+            // Repack frame
+            $addresses = array();
+            foreach ($frame as $byte => $addrArray) {
+                foreach ($addrArray as $address) {
+                    $addresses[$address] = $byte;
+                }
+            }
+            ksort($addresses);
+
+            $dataFlow = array();        // Поток данных сначала сохраняем в массив, потом разворачиваем в строку
+            $dataBuf = array();         // Накопительный буфер для выводимых байтов
+            $curAddress = 0;            // Последний обработанный экранный адрес
+            foreach ($addresses as $address => $byte) {
+                // Initial address
+                if ($curAddress == 0) {
+                    $dataFlow[] = "\t" . 'dw #' . sprintf("%04x", $address);
+                    $dataBuf[] = $byte;
+                    $curAddress = $address + 1;
+                    continue;
+                }
+
+                // Simple add $data_buf value
+                if ($address == $curAddress && count($dataBuf) < 32) {
+                    $dataBuf[] = $byte;
+                    $curAddress = $address + 1;
+                    continue;
+                }
+
+                if (($address != $curAddress && !empty($dataBuf)) || count($dataBuf) == 64) {
+                    $dataFlow[] = "\t" . 'db %00' . sprintf("%06s", decbin(count($dataBuf) - 1));
+
+                    foreach ($dataBuf as $b) {
+                        $dataFlow[] = "\t" . 'db #' . sprintf("%02x", $b);
+                    }
+                    $dataBuf = array();
+                }
+
+                while ($address > $curAddress + 128) {
+                    $delta = floor(($address - $curAddress) / 256);
+                    if ($delta > 15) $delta = 15;
+                    $curAddress += $delta * 256;
+                    $delta2 = $address >= $curAddress + 128 ? 0x10 : 0;
+                    $curAddress += $delta2 ? 128 : 0;
+
+                    $dataFlow[] = "\t" . 'db %101' . sprintf("%05s", decbin($delta + $delta2));
+                }
+
+                while ($curAddress != $address) {
+                    $delta = $address - $curAddress > 64 ? 64 : $address - $curAddress;
+                    $dataFlow[] = "\t" . 'db %01' . sprintf("%06s", decbin($delta - 1));
+                    $curAddress += $delta;
+                }
+
+                $dataBuf[] = $byte;
+                $curAddress++;
+            }
+
+            // Extract last buffer
+            $dataFlow[] = "\t" . 'db %00' . sprintf("%06s", decbin(count($dataBuf) - 1));
+            foreach ($dataBuf as $b) {
+                $dataFlow[] = "\t" . 'db #' . sprintf("%02x", $b);
+            }
+
+            // End of frame
+            $dataFlow[] = "\t" . 'db %11111111';
+
+            $generated[$key] = array(
+                'filename' => 'res/' . sprintf("%04x", $key) . '.asm',
+                'data' => implode("\n", $dataFlow),
+            );
+        }
+
+        return $generated;
+    }
+
+    static function memsavePlayer($keys) {
+        $player = '	; de : starting screen address (#4000, #c000, etc...)
 DisplayFrame	ld HL,FRAME_0000
 	ld c,(hl) : inc hl ; Screen shift
 	ld b,(hl) : inc hl
@@ -171,24 +173,24 @@ NextFrame	ld HL,FRAMES
 
 ';
 
-    $player .= "FRAMES\n";
-    foreach ($keys as $key) {
-        $keyStr = sprintf("%04x", $key);
-        $player .= "\t" . 'dw FRAME_' . $keyStr . "\n";
+        $player .= "FRAMES\n";
+        foreach ($keys as $key) {
+            $keyStr = sprintf("%04x", $key);
+            $player .= "\t" . 'dw FRAME_' . $keyStr . "\n";
+        }
+        $player .= "FRAMES_END\n";
+
+        foreach ($keys as $key) {
+            $keyStr = sprintf("%04x", $key);
+            $player .= "FRAME_" . $keyStr . "\t" . 'include "res/' . $keyStr . '.asm"' . "\n";
+        }
+
+
+        return $player;
     }
-    $player .= "FRAMES_END\n";
 
-    foreach ($keys as $key) {
-        $keyStr = sprintf("%04x", $key);
-        $player .= "FRAME_" . $keyStr . "\t" . 'include "res/' . $keyStr . '.asm"' . "\n";
-    }
-
-
-    return $player;
-}
-
-function memsaveTest($screenAddress) {
-    return '	device zxspectrum128
+    static function memsaveTest($screenAddress) {
+        return '	device zxspectrum128
 
 	org #5d00
 	ld sp, $-2
@@ -214,4 +216,5 @@ DATA	module memsave
 	savebin "memsave.bin", DATA, $-DATA
 	savesna "memsave.sna", #5d00
 ';
+    }
 }

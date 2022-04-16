@@ -38,9 +38,9 @@ if (!empty($_FILES)) {
     $startAddress = isset($_POST['screen_address']) ? intval($_POST['screen_address']) : 0;
 
     $archiver = new Archiver();
-    $archiver->AddFiles(GenerateDiff($frames), 'diff');
-    $archiver->AddFiles(GenerateFast($frames, $startAddress), 'fast');
-    $archiver->AddFiles(GenerateMemsave($frames, $startAddress), 'memsave');
+    $archiver->AddFiles(GenerateDiff::Generate($frames), 'diff');
+    $archiver->AddFiles(GenerateFast::Generate($frames, $startAddress), 'fast');
+    $archiver->AddFiles(GenerateMemsave::Generate($frames, $startAddress), 'memsave');
 
     $makeCmd = 'sjasmplus --inc=fast\. fast\test.asm' . "\n";
     $makeCmd .= 'sjasmplus --inc=memsave\. memsave\test.asm' . "\n";

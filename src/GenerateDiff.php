@@ -5,30 +5,32 @@
  * @param $frames array
  * @return array
  */
-function GenerateDiff($frames) {
-    // Removing 0-frame
-    array_shift($frames);
+class GenerateDiff {
+    static function Generate($frames) {
+        // Removing 0-frame
+        array_shift($frames);
 
-    $generated = array();
-    foreach ($frames as $key => $frame) {
-        $diffArray = array();
-        foreach ($frame as $byte => $addrArray) {
-            foreach ($addrArray as $address) {
-                $diffArray[$address] = $byte;
+        $generated = array();
+        foreach ($frames as $key => $frame) {
+            $diffArray = array();
+            foreach ($frame as $byte => $addrArray) {
+                foreach ($addrArray as $address) {
+                    $diffArray[$address] = $byte;
+                }
             }
-        }
-        ksort($diffArray);
+            ksort($diffArray);
 
-        $diff = '';
-        foreach ($diffArray as $address => $byte) {
-            $diff .= sprintf("%04x", $address) . ' ' . sprintf("%02x", $byte) . "\n";
+            $diff = '';
+            foreach ($diffArray as $address => $byte) {
+                $diff .= sprintf("%04x", $address) . ' ' . sprintf("%02x", $byte) . "\n";
+            }
+
+            $generated[] = array(
+                'filename' => sprintf("%04x", $key) . '.txt',
+                'data' => $diff,
+            );
         }
 
-        $generated[] = array(
-            'filename' => sprintf("%04x", $key) . '.txt',
-            'data' => $diff,
-        );
+        return $generated;
     }
-
-    return $generated;
 }
