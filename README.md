@@ -14,4 +14,4 @@ Library for parsing GIF-file or ZIP-archive with scr-files into ZX Spectrum anim
   
 ## Online demo
 
-https://nyuk.retropc.ru/animation_parser_zx
+https://nyuk.retroscene.org/animation_parser_zx
