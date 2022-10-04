@@ -11,7 +11,15 @@ Library for parsing GIF-file or ZIP-archive with scr-files into ZX Spectrum anim
 
 * Two colors only: approximately black paper, approximately white ink
 * Without internal compression
-  
+
+## Running in docker
+
+```
+docker run -p 80:80 nyuk/speccy_animation_parser
+```
+
+Then open http://localhost
+
 ## Online demo
 
 https://nyuk.retroscene.org/animation_parser_zx

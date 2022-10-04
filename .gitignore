@@ -2,8 +2,3 @@
 vendor
 
 composer.lock
-
-# win-server related
-win-server*
-logs
-temp
