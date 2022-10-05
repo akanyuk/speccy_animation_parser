@@ -35,12 +35,12 @@ if (!empty($_FILES)) {
             exit('Unknown animation type.');
     }
 
-    $startAddress = isset($_POST['screen_address']) ? intval($_POST['screen_address']) : 0;
+    $screenAddress = isset($_POST['screen_address']) ? intval($_POST['screen_address']) : 0;
 
     $archiver = new Archiver();
     $archiver->AddFiles(GenerateDiff::Generate($frames), 'diff');
-    $archiver->AddFiles(GenerateFast::Generate($frames, $startAddress), 'fast');
-    $archiver->AddFiles(GenerateMemsave::Generate($frames, $startAddress), 'memsave');
+    $archiver->AddFiles(GenerateFast::Generate($frames, $screenAddress), 'fast');
+    $archiver->AddFiles(GenerateMemsave::Generate($frames, $screenAddress), 'memsave');
 
     $makeCmd = 'sjasmplus --inc=fast\. fast\test.asm' . "\n";
     $makeCmd .= 'sjasmplus --inc=memsave\. memsave\test.asm' . "\n";

@@ -9,6 +9,7 @@ COPY docker-files /
 COPY --chown=www-data:www-data src/ /www/src
 COPY --chown=www-data:www-data vendor/ /www/vendor
 COPY --chown=www-data:www-data index.php /www
+COPY --chown=www-data:www-data cmd.php /www
 COPY --chown=www-data:www-data favicon.ico /www
 
 WORKDIR /www

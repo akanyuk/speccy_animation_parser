@@ -17,7 +17,8 @@
     "ccampbell/chromephp": "^4.1",
     "sybio/gif-frame-extractor": "^1.0",
     "ext-gd": "*",
-    "ext-zip": "*"
+    "ext-zip": "*",
+    "vanilla/garden-cli": "^3.1"
   },
   "autoload": {
     "psr-0": {
