@@ -113,79 +113,53 @@ class GenerateMemsave {
     }
 
     static function memsavePlayer($keys) {
-        $player = '	; de : starting screen address (#4000, #c000, etc...)
-DisplayFrame	ld HL,FRAME_0000
-	ld c,(hl) : inc hl ; Screen shift
-	ld b,(hl) : inc hl
-	ex de,hl
-	add hl,bc
-	ex de,hl
-	xor a : ld b,a
-cycle	ld  a,(hl)
-	inc hl
-	ld c,a
-	rla
-	jp nc,2f
-	rlca		; cp  #80
-	ret c
-	; long jump
-	ld  a,c
-	and #0f
-	add a,d : ld d,a
-	bit 4,c
-	jp  z, cycle
-	ld a,#80
-	add e
-	ld e,a
-	jp nc,cycle
-	inc d
-	jp  cycle
-2	rlca
-	jp c,nearJmp
-	inc c		; copy N bytes to screen
-	ldir
-	jp cycle
-nearJmp	ld a,c
-	res 6,a
-	inc a
-	add e
-	ld e,a
-	jp nc,cycle
-	inc d
-	jp  cycle
-
-NextFrame	ld HL,FRAMES
-	inc hl : inc hl
-	ld a,l
-	cp low(FRAMES_END)
-	jp nz, 1f
-	ld a,h
-	cp high(FRAMES_END)
-	jp nz,1f
-	ld hl,FRAMES
-1	ld (NextFrame+1),hl
-	ld e, (hl)
-	inc hl
-	ld d,(hl)
-	ex de,hl
-	ld (DisplayFrame+1),hl
-	ret
+        $player = 'play	; DE = starting screen address (#4000, #c000, etc...)
+        ld	hl,FRAME_0000
+        ld	a,h : sub high FRAME_END : or l : sub low FRAME_END
+        jr	nz,1f
+        ld	hl,FRAME_0000
+1	ld	c,(hl)  :  inc hl	; Screen shift
+        ld	b,(hl)  :  inc hl
+        ex	de,hl
+        add	hl,bc
+        ld	b,0
+cycle	ld	a,(de)  :  inc de
+        ld	c,a
+        add	a
+        jr	nc,2f
+        jp	m, nextFrame
+        ; long jump
+        ld	a,c
+        and	#0f
+        add	a,h : ld h,a
+        bit	4,c
+        jr	z, cycle
+        ld	c,#80
+        add	hl,bc
+        jp	cycle
+    
+2	jp	m,nearJmp
+        inc	c
+        ex	de,hl
+        ldir
+        ex	de,hl
+        jp	cycle
+    
+nearJmp	res	6,c
+        inc	c
+        add	hl,bc
+        jp	cycle
+nextFrame   ld	(play+1),de
+        ret
 
 ';
-
-        $player .= "FRAMES\n";
-        foreach ($keys as $key) {
-            $keyStr = sprintf("%04x", $key);
-            $player .= "\t" . 'dw FRAME_' . $keyStr . "\n";
-        }
-        $player .= "FRAMES_END\n";
 
         foreach ($keys as $key) {
             $keyStr = sprintf("%04x", $key);
             $player .= "FRAME_" . $keyStr . "\t" . 'include "res/' . $keyStr . '.asm"' . "\n";
         }
 
-
+        $player .= "FRAME_END\n";
         return $player;
     }
 
@@ -199,21 +173,19 @@ NextFrame	ld HL,FRAMES
 	ld bc, #02ff
 	ld (hl), %01000111
 	ldir
-	xor a : out (#fe), a
-	ei
 
-1	ld de, #' . sprintf("%04x", $screenAddress) . '
-	call memsave.DisplayFrame
-	call memsave.NextFrame
-	halt
-	jr 1b
+1   ei : halt
+    ld de, #' . sprintf("%04x", $screenAddress) . '
+	ld a,1 : out (#fe),a
+	call	player
+	xor a : out (#fe),a
+	jp	1b
 
-DATA	module memsave
+player	module memsave
 	include "player.asm"
 	endmodule
 
-	display /d, "Animation size: ", $-DATA
-	savebin "memsave.bin", DATA, $-DATA
+	display /d, "Animation size: ", $-player
 	savesna "memsave.sna", #5d00
 ';
     }
