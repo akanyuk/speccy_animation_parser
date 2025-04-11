@@ -27,7 +27,8 @@
       "GenerateFast": "src",
       "GenerateMemsave": "src",
       "ParserGif": "src",
-      "ParserScrZip": "src"
+      "ParserScrZip": "src",
+      "ParserSca": "src"
     }
   }
 }
