@@ -5,7 +5,9 @@
  * @desc Parsing the sca file
  */
 class ParserSca {
-    private $curScreen = array();        // Массив с данными текущего состояния экрана
+    private $scrFiles = [];         // Loaded scr files
+    private $delays = [];           // Delays
+    private $curScreen = array();   // Current screen state
 
     function __construct() {
         // initial curScreen array
@@ -41,7 +43,7 @@ class ParserSca {
         return $result;
     }
 
-    private function loadSCA($filename) {
+    function Load($filename) {
         $sca = file_get_contents($filename);
 
         if (strtoupper(substr($sca, 0, 3)) != "SCA") {
@@ -70,36 +72,34 @@ class ParserSca {
         $delaysOffset = ord(substr($sca, 11, 1)) + ord(substr($sca, 12, 1)) * 256;
         $payloadOffset = $delaysOffset + $framesCount;
 
-        $files = array();
+        $this->scrFiles = [];
         for ($i = 0; $i < $framesCount; $i++) {
             $frame = substr($sca, $i * 6912 + $payloadOffset, 6912);
-            $files[] = $frame;
+            $this->scrFiles[] = $frame;
         }
-        $files[] = $files[0];
 
-        return $files;
+        $this->delays = [];
+        for ($i = 0; $i < $framesCount; $i++) {
+            $this->delays[] = ord(substr($sca, $delaysOffset + $i, 1));
+        }
+
+        return true;
     }
 
-    function Parse($filename) {
-        $files = $this->loadSCA($filename);
-        if ($files === false) {
-            return false;
-        }
-
+    function Parse() {
         $result = array();
-        foreach ($files as $file) {
+        foreach ($this->scrFiles as $file) {
             $result[] = $this->proceedFile($file);
         }
 
         return $result;
     }
 
-    function KeyFrame($filename) {
-        $files = $this->loadSCA($filename);
-        if ($files === false || count($files) == 0) {
-            return false;
-        }
+    function KeyFrame() {
+        return count($this->scrFiles) > 0 ? $this->scrFiles[0] : false;
+    }
 
-        return $files[0];
+    function Delays() {
+        return $this->delays;
     }
 }

@@ -5,7 +5,8 @@
  * @desc парсинг архива с scr-файлами
  */
 class ParserScrZip {
-    private $curScreen = array();        // Массив с данными текущего состояния экрана
+    private $scrFiles = [];         // Loaded scr files
+    private $curScreen = array();   // Current screen state
 
     function __construct() {
         // initial curScreen array
@@ -41,14 +42,14 @@ class ParserScrZip {
         return $result;
     }
 
-    private function loadSCRZIP($filename) {
-        $files = array();
+    function Load($filename) {
         $zip = new ZipArchive;
         if (!$zip->open($filename)) {
             $this->error('Unable to open ZIP archive', __FILE__, __LINE__);
             return false;
         }
 
+        $this->scrFiles = array();
         for ($i = 0; $i < $zip->numFiles; $i++) {
             $entry = $zip->getNameIndex($i);
             if (substr($entry, -1) == '/') {
@@ -65,31 +66,31 @@ class ParserScrZip {
                 $frame .= fread($fp, 2);
             }
 
-            $files[] = $frame;
+            $this->scrFiles[] = $frame;
         }
 
         $zip->close();
 
-        if (count($files) == 0) {
+        if (count($this->scrFiles) == 0) {
             $this->error('No files found in ZIP archive', __FILE__, __LINE__);
             return false;
         }
 
-        $files[] = $files[0];
-        return $files;
+        $this->scrFiles[] = $this->scrFiles[0];
+
+        return true;
     }
 
-    function Parse($filename) {
-        $files = $this->loadSCRZIP($filename);
-        if ($files == false) {
-            return false;
-        }
-
+    function Parse() {
         $result = array();
-        foreach ($files as $file) {
+        foreach ($this->scrFiles as $file) {
             $result[] = $this->proceedFile($file);
         }
 
         return $result;
+    }
+
+    function KeyFrame() {
+        return count($this->scrFiles) > 0 ? $this->scrFiles[0] : false;
     }
 }

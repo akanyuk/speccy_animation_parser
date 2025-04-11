@@ -1,9 +1,14 @@
 <?php
 
 class GenerateFast {
-    static function Generate($frames, $startAddress = 0, $keyFrame = false) {
-        // Removing 0-frame
+    static function Generate($frames, $startAddress, $delays, $keyFrame = false) {
+        // Removing 0-frame (keyframe)
         array_shift($frames);
+
+        if (count($delays) > 1) {
+            $first = array_shift($delays);
+            $delays[] = $first;
+        }
 
         $generated = self::generateFastRes($frames, $startAddress);
 
@@ -14,7 +19,7 @@ class GenerateFast {
 
         $generated[] = array(
             'filename' => 'test.asm',
-            'data' => self::fastTest($keyFrame),
+            'data' => self::fastTest(count($frames), $delays, $keyFrame),
         );
 
         if ($keyFrame) {
@@ -209,7 +214,7 @@ NextFrame	ld HL,FRAMES
         return $player;
     }
 
-    static function fastTest($keyFrame = false) {
+    static function fastTest($numFrames, $delays, $keyFrame = false) {
         if ($keyFrame) {
             $scrClean = '
 	ld hl, KEY_FRAME
@@ -231,18 +236,43 @@ NextFrame	ld HL,FRAMES
             $incKeyFrame = '';
         }
 
-        return '	device zxspectrum128
+        if (count($delays) > 1 && end($delays) > 0) {
+            $beforeStartDelay = 'ld b, '.end($delays).' : halt : djnz $-1'."\n";
+        } else {
+            $beforeStartDelay = '';
+        }
 
+        $delaysDb = [];
+        for ($i = 0; $i < $numFrames; $i++) {
+            $d = isset($delays[$i+1]) ? $delays[$i+1] : 1;
+            $delaysDb[] = "db ".$d;
+        }
+
+        return '	device zxspectrum128
 	org #5d00
 	ld sp, $-2
-	'.$scrClean.'
 	xor a : out (#fe), a
+	'.$scrClean.'
 	ei
 
-1	call fast.DisplayFrame
+	'.$beforeStartDelay.'
+1	ld b, '.$numFrames.'
+	ld hl, DELAYS
+2	push bc
+	push hl
+	call fast.DisplayFrame
 	call fast.NextFrame
-	halt
+	
+	pop hl
+	ld b, (hl)
+	inc hl
+	halt : djnz $-1
+	
+	pop bc 
+	djnz 2b
 	jr 1b
+
+DELAYS  '.implode("\n\t", $delaysDb).'
 
 '.$incKeyFrame.'
     

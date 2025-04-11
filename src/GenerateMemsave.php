@@ -9,9 +9,14 @@
 */
 
 class GenerateMemsave {
-    static function Generate($frames, $startAddress = 0, $keyFrame = false) {
-        // Removing 0-frame
+    static function Generate($frames, $startAddress, $delays, $keyFrame = false) {
+        // Removing 0-frame (keyframe)
         array_shift($frames);
+
+        if (count($delays) > 1) {
+            $first = array_shift($delays);
+            $delays[] = $first;
+        }
 
         $generated = self::generateMemsaveRes($frames);
 
@@ -22,7 +27,7 @@ class GenerateMemsave {
 
         $generated[] = array(
             'filename' => 'test.asm',
-            'data' => self::memsaveTest($startAddress, $keyFrame),
+            'data' => self::memsaveTest($startAddress, count($frames), $delays, $keyFrame),
         );
 
         if ($keyFrame) {
@@ -174,7 +179,7 @@ nextFrame   ld	(play+1),de
         return $player;
     }
 
-    static function memsaveTest($screenAddress, $keyFrame = false) {
+    static function memsaveTest($screenAddress, $numFrames, $delays, $keyFrame = false) {
         if ($keyFrame) {
             $scrClean = '
 	ld hl, KEY_FRAME
@@ -196,17 +201,43 @@ nextFrame   ld	(play+1),de
             $incKeyFrame = '';
         }
 
+        if (count($delays) > 1 && end($delays) > 0) {
+            $beforeStartDelay = 'ld b, '.end($delays).' : halt : djnz $-1'."\n";
+        } else {
+            $beforeStartDelay = '';
+        }
+
+        $delaysDb = [];
+        for ($i = 0; $i < $numFrames; $i++) {
+            $d = isset($delays[$i+1]) ? $delays[$i+1] : 1;
+            $delaysDb[] = "db ".$d;
+        }
+
         return '	device zxspectrum128
 
 	org #5d00
-	'.$scrClean.'
-
-1   ei : halt
-    ld de, #' . sprintf("%04x", $screenAddress) . '
-	ld a,1 : out (#fe),a
-	call	player
 	xor a : out (#fe),a
-	jp	1b
+	'.$scrClean.'
+	ei
+    
+	'.$beforeStartDelay.'
+1	ld b, '.$numFrames.'
+	ld hl, DELAYS
+2	push bc
+	push hl
+    ld de, #' . sprintf("%04x", $screenAddress) . '
+	call	player
+	
+	pop hl
+	ld b, (hl)
+	inc hl
+	halt : djnz $-1
+	
+	pop bc 
+	djnz 2b
+	jr 1b
+	    
+DELAYS  '.implode("\n\t", $delaysDb).'
 
 '.$incKeyFrame.'
 

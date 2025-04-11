@@ -1,6 +1,6 @@
 <?php
 
-// All of the command line classes are in the Garden\Cli namespace.
+// All the command line classes are in the Garden\Cli namespace.
 use Garden\Cli\Cli;
 
 // Require composer's autoloader.
@@ -25,7 +25,7 @@ $cli = Cli::create()
     ->opt('test:t', 'Generating test.asm', false, 'bool');
 
 try {
-    $args = $cli->parse($argv, true);
+    $args = $cli->parse($argv);
 } catch (Exception $e) {
     exit;
 }
@@ -50,13 +50,26 @@ switch (pathinfo($inputFile, PATHINFO_EXTENSION)) {
         if ($frames === false) {
             exit("Parse GIF error");
         }
+        $keyFrame = false;
+        $delays = [];
         break;
     case 'zip':
         $parser = new ParserScrZip();
-        $frames = $parser->Parse($inputFile);
-        if ($frames === false) {
+        if (!$parser->Load($inputFile)) {
             exit("Parse SCR files in ZIP archive error");
         }
+        $frames = $parser->Parse();
+        $keyFrame = $parser->KeyFrame();
+        $delays = [];
+        break;
+    case 'sca':
+        $parser = new ParserSca();
+        if (!$parser->Load($inputFile)) {
+            exit("Parse SCR files in ZIP archive error");
+        }
+        $frames = $parser->Parse();
+        $keyFrame = $parser->KeyFrame();
+        $delays = $parser->Delays();
         break;
     default:
         exit('Unknown input file type');
@@ -67,10 +80,10 @@ switch ($args->getCommand()) {
         $files = GenerateDiff::Generate($frames);
         break;
     case 'fast':
-        $files = GenerateFast::Generate($frames, $screenAddress);
+        $files = GenerateFast::Generate($frames, $screenAddress, $delays, $keyFrame);
         break;
     case 'memsave':
-        $files = GenerateMemsave::Generate($frames, $screenAddress);
+        $files = GenerateMemsave::Generate($frames, $screenAddress, $delays, $keyFrame);
         break;
     default:
         exit('Unknown command');

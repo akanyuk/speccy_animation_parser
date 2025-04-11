@@ -23,31 +23,51 @@ if (!empty($_FILES)) {
             if ($frames === false) {
                 exit("Parse GIF error");
             }
+            $keyFrame = false;
+            $delays = [];
             break;
         case 'zip':
             $parser = new ParserScrZip();
-            $frames = $parser->Parse($_FILES['animation_file']['tmp_name']);
-            if ($frames === false) {
+            if (!$parser->Load($_FILES['animation_file']['tmp_name'])) {
                 exit("Parse SCR files in ZIP archive error");
             }
+            $frames = $parser->Parse();
+            $keyFrame = $parser->KeyFrame();
+            $delays = [];
+            break;
+        case 'sca':
+            $parser = new ParserSca();
+            if (!$parser->Load($_FILES['animation_file']['tmp_name'])) {
+                exit("Parse SCR files in ZIP archive error");
+            }
+            $frames = $parser->Parse();
+            $keyFrame = $parser->KeyFrame();
+            $delays = $parser->Delays();
             break;
         default:
-            exit('Unknown animation type.');
+            exit('Unknown input file type');
     }
 
     $screenAddress = isset($_POST['screen_address']) ? intval($_POST['screen_address']) : 0;
 
     $archiver = new Archiver();
     $archiver->AddFiles(GenerateDiff::Generate($frames), 'diff');
-    $archiver->AddFiles(GenerateFast::Generate($frames, $screenAddress), 'fast');
-    $archiver->AddFiles(GenerateMemsave::Generate($frames, $screenAddress), 'memsave');
+    $archiver->AddFiles(GenerateFast::Generate($frames, $screenAddress, $delays, $keyFrame), 'fast');
+    $archiver->AddFiles(GenerateMemsave::Generate($frames, $screenAddress, $delays, $keyFrame), 'memsave');
 
-    $makeCmd = 'sjasmplus --inc=fast\. fast\test.asm' . "\n";
-    $makeCmd .= 'sjasmplus --inc=memsave\. memsave\test.asm' . "\n";
+    $makeCmd = 'sjasmplus --inc=fast\. fast\test.asm
+sjasmplus --inc=memsave\. memsave\test.asm
+';
+
+    $makeSh = "#! /bin/sh
+
+sjasmplus --inc=fast/. fast/test.asm
+sjasmplus --inc=memsave/. memsave/test.asm
+";
+
     $archiver->AddFiles(array(
-        array('data' => $makeCmd,
-            'filename' => 'make.cmd',
-        ),
+        array('data' => $makeCmd, 'filename' => 'make.cmd'),
+        array('data' => $makeSh, 'filename' => 'make.sh'),
     ));
 
     $content = $archiver->Done();
@@ -64,7 +84,7 @@ if (!empty($_FILES)) {
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <meta name="language" content="ru"/>
     <title>Speccy animation parser</title>
-    <style type="text/css">
+    <style>
         BODY {
             font: 15px Verdana, Geneva, sans-serif;
         }
@@ -93,7 +113,7 @@ if (!empty($_FILES)) {
     </fieldset>
 </form>
 
-<p><small>&copy; 2022, Andrey <a href="http://nyuk.retropc.ru">nyuk</a> Marinov</small></p>
+<p><small>&copy; 2025, Andrey <a href="https://nyuk.retropc.ru">nyuk</a> Marinov</small></p>
 
 </body>
 </html>
