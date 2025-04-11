@@ -9,7 +9,7 @@
 */
 
 class GenerateMemsave {
-    static function Generate($frames, $startAddress = 0) {
+    static function Generate($frames, $startAddress = 0, $keyFrame = false) {
         // Removing 0-frame
         array_shift($frames);
 
@@ -22,8 +22,15 @@ class GenerateMemsave {
 
         $generated[] = array(
             'filename' => 'test.asm',
-            'data' => self::memsaveTest($startAddress),
+            'data' => self::memsaveTest($startAddress, $keyFrame),
         );
+
+        if ($keyFrame) {
+            $generated[] = array(
+                'filename' => 'keyframe.scr',
+                'data' => $keyFrame,
+            );
+        }
 
         return $generated;
     }
@@ -32,8 +39,12 @@ class GenerateMemsave {
         $generated = array();
         foreach ($frames as $key => $frame) {
             if (empty($frame)) {
-                $generated[$key] = "\t" . 'dw 0' . "\n";
-                $generated[$key] .= "\t" . 'db %11100000' . "\n";
+                $generated[$key] = array(
+                    'filename' => 'res/' . sprintf("%04x", $key) . '.asm',
+                    'data' => '
+    dw 0
+    db %11100000',
+                );
                 continue;
             }
 
@@ -85,7 +96,7 @@ class GenerateMemsave {
                 }
 
                 while ($curAddress != $address) {
-                    $delta = $address - $curAddress > 64 ? 64 : $address - $curAddress;
+                    $delta = min($address - $curAddress, 64);
                     $dataFlow[] = "\t" . 'db %01' . sprintf("%06s", decbin($delta - 1));
                     $curAddress += $delta;
                 }
@@ -163,16 +174,32 @@ nextFrame   ld	(play+1),de
         return $player;
     }
 
-    static function memsaveTest($screenAddress) {
-        return '	device zxspectrum128
+    static function memsaveTest($screenAddress, $keyFrame = false) {
+        if ($keyFrame) {
+            $scrClean = '
+	ld hl, KEY_FRAME
+	ld de, #4000
+	ld bc, #1b00
+	ldir
+';
 
-	org #5d00
-	ld sp, $-2
+            $incKeyFrame = 'KEY_FRAME    incbin "keyframe.scr"';
+        } else {
+            $scrClean = '
 	ld hl, #5800
 	ld de, #5801
 	ld bc, #02ff
 	ld (hl), %01000111
 	ldir
+';
+
+            $incKeyFrame = '';
+        }
+
+        return '	device zxspectrum128
+
+	org #5d00
+	'.$scrClean.'
 
 1   ei : halt
     ld de, #' . sprintf("%04x", $screenAddress) . '
@@ -181,11 +208,13 @@ nextFrame   ld	(play+1),de
 	xor a : out (#fe),a
 	jp	1b
 
+'.$incKeyFrame.'
+
 player	module memsave
 	include "player.asm"
 	endmodule
 
-	display /d, "Animation size: ", $-player
+	display /d, "Memsave animation size: ", $-player
 	savesna "memsave.sna", #5d00
 ';
     }
