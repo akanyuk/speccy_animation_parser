@@ -25,6 +25,7 @@ if (!empty($_FILES)) {
             }
             $keyFrame = false;
             $delays = [];
+            $borderColor = 0;
             break;
         case 'zip':
             $parser = new ParserScrZip();
@@ -34,6 +35,7 @@ if (!empty($_FILES)) {
             $frames = $parser->Parse();
             $keyFrame = $parser->KeyFrame();
             $delays = [];
+            $borderColor = 0;
             break;
         case 'sca':
             $parser = new ParserSca();
@@ -43,6 +45,7 @@ if (!empty($_FILES)) {
             $frames = $parser->Parse();
             $keyFrame = $parser->KeyFrame();
             $delays = $parser->Delays();
+            $borderColor = $parser->RecommendedBorder();
             break;
         default:
             exit('Unknown input file type');
@@ -52,8 +55,8 @@ if (!empty($_FILES)) {
 
     $archiver = new Archiver();
     $archiver->AddFiles(GenerateDiff::Generate($frames), 'diff');
-    $archiver->AddFiles(GenerateFast::Generate($frames, $screenAddress, $delays, $keyFrame), 'fast');
-    $archiver->AddFiles(GenerateMemsave::Generate($frames, $screenAddress, $delays, $keyFrame), 'memsave');
+    $archiver->AddFiles(GenerateFast::Generate($frames, $screenAddress, $delays, $borderColor, $keyFrame), 'fast');
+    $archiver->AddFiles(GenerateMemsave::Generate($frames, $screenAddress, $delays, $borderColor, $keyFrame), 'memsave');
 
     $makeCmd = 'sjasmplus --inc=fast\. fast\test.asm
 sjasmplus --inc=memsave\. memsave\test.asm

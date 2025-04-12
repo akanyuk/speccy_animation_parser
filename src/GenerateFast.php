@@ -1,7 +1,7 @@
 <?php
 
 class GenerateFast {
-    static function Generate($frames, $startAddress, $delays, $keyFrame = false) {
+    static function Generate($frames, $startAddress, $delays, $borderColor, $keyFrame) {
         // Removing 0-frame (keyframe)
         array_shift($frames);
 
@@ -19,7 +19,7 @@ class GenerateFast {
 
         $generated[] = array(
             'filename' => 'test.asm',
-            'data' => self::fastTest(count($frames), $delays, $keyFrame),
+            'data' => self::fastTest(count($frames), $delays, $borderColor, $keyFrame),
         );
 
         if ($keyFrame) {
@@ -214,7 +214,7 @@ NextFrame	ld HL,FRAMES
         return $player;
     }
 
-    static function fastTest($numFrames, $delays, $keyFrame = false) {
+    static function fastTest($numFrames, $delays, $borderColor, $keyFrame) {
         if ($keyFrame) {
             $scrClean = '
 	ld hl, KEY_FRAME
@@ -251,12 +251,12 @@ NextFrame	ld HL,FRAMES
         return '	device zxspectrum128
 	org #5d00
 	ld sp, $-2
-	xor a : out (#fe), a
+	ld a, '.$borderColor.' : out (#fe), a
 	'.$scrClean.'
 	ei
 
 	'.$beforeStartDelay.'
-1	ld b, '.$numFrames.'
+1	ld bc, '.$numFrames.'
 	ld hl, DELAYS
 2	push bc
 	push hl
@@ -269,7 +269,9 @@ NextFrame	ld HL,FRAMES
 	halt : djnz $-1
 	
 	pop bc 
-	djnz 2b
+	dec bc
+	ld a, b : or c : jr nz, 1b
+
 	jr 1b
 
 DELAYS  '.implode("\n\t", $delaysDb).'

@@ -52,6 +52,7 @@ switch (pathinfo($inputFile, PATHINFO_EXTENSION)) {
         }
         $keyFrame = false;
         $delays = [];
+        $borderColor = 0;
         break;
     case 'zip':
         $parser = new ParserScrZip();
@@ -61,6 +62,7 @@ switch (pathinfo($inputFile, PATHINFO_EXTENSION)) {
         $frames = $parser->Parse();
         $keyFrame = $parser->KeyFrame();
         $delays = [];
+        $borderColor = 0;
         break;
     case 'sca':
         $parser = new ParserSca();
@@ -70,6 +72,7 @@ switch (pathinfo($inputFile, PATHINFO_EXTENSION)) {
         $frames = $parser->Parse();
         $keyFrame = $parser->KeyFrame();
         $delays = $parser->Delays();
+        $borderColor = $parser->RecommendedBorder();
         break;
     default:
         exit('Unknown input file type');
@@ -80,10 +83,10 @@ switch ($args->getCommand()) {
         $files = GenerateDiff::Generate($frames);
         break;
     case 'fast':
-        $files = GenerateFast::Generate($frames, $screenAddress, $delays, $keyFrame);
+        $files = GenerateFast::Generate($frames, $screenAddress, $delays, $borderColor, $keyFrame);
         break;
     case 'memsave':
-        $files = GenerateMemsave::Generate($frames, $screenAddress, $delays, $keyFrame);
+        $files = GenerateMemsave::Generate($frames, $screenAddress, $delays, $borderColor, $keyFrame);
         break;
     default:
         exit('Unknown command');

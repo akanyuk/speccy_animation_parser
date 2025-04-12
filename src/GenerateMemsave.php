@@ -9,7 +9,7 @@
 */
 
 class GenerateMemsave {
-    static function Generate($frames, $startAddress, $delays, $keyFrame = false) {
+    static function Generate($frames, $startAddress, $delays, $borderColor, $keyFrame) {
         // Removing 0-frame (keyframe)
         array_shift($frames);
 
@@ -27,7 +27,7 @@ class GenerateMemsave {
 
         $generated[] = array(
             'filename' => 'test.asm',
-            'data' => self::memsaveTest($startAddress, count($frames), $delays, $keyFrame),
+            'data' => self::memsaveTest($startAddress, count($frames), $delays, $borderColor, $keyFrame),
         );
 
         if ($keyFrame) {
@@ -179,7 +179,7 @@ nextFrame   ld	(play+1),de
         return $player;
     }
 
-    static function memsaveTest($screenAddress, $numFrames, $delays, $keyFrame = false) {
+    static function memsaveTest($screenAddress, $numFrames, $delays, $borderColor, $keyFrame) {
         if ($keyFrame) {
             $scrClean = '
 	ld hl, KEY_FRAME
@@ -216,12 +216,12 @@ nextFrame   ld	(play+1),de
         return '	device zxspectrum128
 
 	org #5d00
-	xor a : out (#fe),a
+	ld a, '.$borderColor.' : out (#fe), a
 	'.$scrClean.'
 	ei
     
 	'.$beforeStartDelay.'
-1	ld b, '.$numFrames.'
+1	ld bc, '.$numFrames.'
 	ld hl, DELAYS
 2	push bc
 	push hl
@@ -234,7 +234,9 @@ nextFrame   ld	(play+1),de
 	halt : djnz $-1
 	
 	pop bc 
-	djnz 2b
+	dec bc
+	ld a, b : or c : jr nz, 1b
+
 	jr 1b
 	    
 DELAYS  '.implode("\n\t", $delaysDb).'

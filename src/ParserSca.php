@@ -7,6 +7,8 @@
 class ParserSca {
     private $scrFiles = [];         // Loaded scr files
     private $delays = [];           // Delays
+    private $recommendedBorder = 0; // Recommended border color (1 byte)
+
     private $curScreen = array();   // Current screen state
 
     function __construct() {
@@ -57,19 +59,21 @@ class ParserSca {
             return false;
         }
 
-        $payloadType = ord(substr($sca, 10, 1));
+        $payloadType = ord(substr($sca, 11, 1));
         if ($payloadType != 0) {
             $this->error("Unsupported payload type: " . $payloadType, __FILE__, __LINE__);
             return false;
         }
 
-        $framesCount = ord(substr($sca, 8, 1)) + ord(substr($sca, 9, 1)) * 256;
+        $framesCount = ord(substr($sca, 9, 1)) + ord(substr($sca, 10, 1)) * 256;
         if ($framesCount == 0) {
             $this->error('No frames found', __FILE__, __LINE__);
             return false;
         }
 
-        $delaysOffset = ord(substr($sca, 11, 1)) + ord(substr($sca, 12, 1)) * 256;
+        $this->recommendedBorder = ord(substr($sca, 8, 1));
+
+        $delaysOffset = ord(substr($sca, 12, 1)) + ord(substr($sca, 13, 1)) * 256;
         $payloadOffset = $delaysOffset + $framesCount;
 
         $this->scrFiles = [];
@@ -101,5 +105,9 @@ class ParserSca {
 
     function Delays() {
         return $this->delays;
+    }
+
+    function RecommendedBorder() {
+        return $this->recommendedBorder;
     }
 }
